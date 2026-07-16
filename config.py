@@ -9,6 +9,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 RAW_DATA_DIR = BASE_DIR / "raw_data"
 PROCESSED_DATA_DIR = BASE_DIR / "processed_data"
+ANALYSIS_DATA_DIR = BASE_DIR / "analysis_data"
 
 
 #-----------------------

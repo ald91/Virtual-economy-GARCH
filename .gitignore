@@ -2,7 +2,9 @@ __pycache__/
 .vscode/
 .venv/
 
-data/
+raw_data/
+processed_data/
+analysis_data/
 
 *.pyc
 *.env

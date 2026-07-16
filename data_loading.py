@@ -61,3 +61,7 @@ def refresh_data() -> int:
         last_updated_ms = int(time.time() * 1000)
     print(f"last update time: {last_updated_ms} ms")
     return last_updated_ms
+
+UPDATE_NEEDED = is_data_old(UNIX_TIME_LAST_UPDATE)
+if UPDATE_NEEDED:
+    refresh_data()

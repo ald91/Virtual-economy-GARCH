@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, SUPPORTED_INDEX_LIST
+from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, ANALYSIS_DATA_DIR, SUPPORTED_INDEX_LIST
 
 def load_index(index_name:str) -> pd.DataFrame:
     """
@@ -67,6 +67,13 @@ def convert_timestamp(data:pd.DataFrame) -> pd.DataFrame:
         errors="ignore"
     )
 
+    # SAMPLE FREQUENCY =  one observation per day
+    data = (
+        data
+        .groupby("date", as_index=False)
+        .last()
+    )
+
     data = data[["date", "price"]]
 
     return data
@@ -114,6 +121,53 @@ def load_all_indices(index_names: list[str]) -> dict[str, pd.DataFrame]:
 
     return indices
 
+def merge_indices(data:dict) -> bool:
+    """ Merged all cleaned CSV files into one master file ready for analysis by column and matched by date.
+        
+        Args:
+            data dict(CPI index : pd.dataframe).
+        
+        Returns:
+            outcome bool.
+    """
+    merged_dataframe = None
+
+    for index_name, dataframe in indices.items():
+
+        # Rename price column to the index name
+        dataframe = dataframe.rename(
+            columns={"price": index_name}
+        )
+
+        if merged_dataframe is None:
+            merged_dataframe = dataframe
+
+        else:
+            merged_dataframe = merged_dataframe.merge(
+                dataframe,
+                on="date",
+                how="inner",
+                validate="one_to_one"
+            )
+
+    return merged_dataframe
+
+def save_merged_frame(data:pd.DataFrame) -> bool:
+    """
+    saves the merged frame from merged_indices into the analysis directory as a csv.
+
+    Args:
+        data (pd.DataFrame)
+    Returns:
+        bool 
+    """
+    data.to_csv(f"{ANALYSIS_DATA_DIR}/master.csv", index=False)
+    print("succesfully updated master and saved to CSV")
+    return True
+
+# running commands
+
+
 indices = load_all_indices(SUPPORTED_INDEX_LIST)
 
 for index_name, dataframe in indices.items():
@@ -124,3 +178,6 @@ for index_name, dataframe in indices.items():
     indices[index_name] = dataframe
 
     save_index(index_name, dataframe)
+
+indices = merge_indices(indices)
+save_merged_frame(indices)
