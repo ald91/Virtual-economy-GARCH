@@ -5,6 +5,7 @@ __pycache__/
 raw_data/
 processed_data/
 analysis_data/
+figures/
 
 *.pyc
 *.env
