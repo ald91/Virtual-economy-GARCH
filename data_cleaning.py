@@ -6,6 +6,10 @@ from config import ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR, SUPPORTE
 from data_helper import load_csv, save_csv
 
 
+#=====================
+# function definitions
+#=====================
+
 def clean_index(data:pd.DataFrame) -> pd.DataFrame:
     """ Takes a loaded dataframe and removes unwanted columns from the CSV.
 
@@ -103,7 +107,7 @@ def merge_indices(data:dict[str,pd.DataFrame]) -> pd.DataFrame:
         )
 
         if merged_dataframe is None:
-            merged_dataframe = index_dataframe
+            merged_dataframe = dataframe
 
         else:
             merged_dataframe = merged_dataframe.merge(
@@ -114,8 +118,6 @@ def merge_indices(data:dict[str,pd.DataFrame]) -> pd.DataFrame:
             )
 
     return merged_dataframe
-
-
 
 #===================
 # running commands
@@ -130,7 +132,6 @@ for index_name, dataframe in indices.items():
     indices[index_name] = dataframe
 
     save_csv(index_name, dataframe, RAW_DATA_DIR ,False)
-
 
 indices = merge_indices(indices)
 save_csv("master",indices,ANALYSIS_DATA_DIR,False)

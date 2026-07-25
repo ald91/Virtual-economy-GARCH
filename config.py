@@ -11,19 +11,19 @@ RAW_DATA_DIR = BASE_DIR / "raw_data"
 PROCESSED_DATA_DIR = BASE_DIR / "processed_data"
 ANALYSIS_DATA_DIR = BASE_DIR / "analysis_data"
 
-
 #-----------------------
 # Cache & Timeouts
 #-----------------------
 CACHE_DURATION_MS = 86400000
 API_TIMEOUT_SECONDS = 10
-
+API_CALL_SLEEP = 1.5
 
 #-----------------------
-# Supported CPI Indecies from OSRS GE MW API
+# Supported API endpoints
 #-----------------------
+OSRS_WIKI_API = "https://oldschool.runescape.wiki/api.php"
 
-API_ENDPOINTS = {
+OSRS_GEMW_CPI_ENDPOINTS = {
     "Common Trade Index":
         "https://api.weirdgloop.org/exchange/history/osrs/all?id=GE%20Common%20Trade%20Index",
     "Rune Index":
@@ -38,4 +38,4 @@ API_ENDPOINTS = {
         "https://api.weirdgloop.org/exchange/history/osrs/all?id=GE%20Herb%20Index"
 }
 
-SUPPORTED_INDEX_LIST = API_ENDPOINTS.keys()
+SUPPORTED_INDEX_LIST= OSRS_GEMW_CPI_ENDPOINTS.keys()

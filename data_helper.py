@@ -4,6 +4,10 @@ import pandas as pd
 from pathlib import Path
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, ANALYSIS_DATA_DIR
 
+#=====================
+# function definitions
+#=====================
+
 def load_csv(sheet_name:str, target_dir:Path) -> pd.DataFrame:
     """ loads the target sheet to the application"""
     file_path = target_dir/f"{sheet_name}.csv"
