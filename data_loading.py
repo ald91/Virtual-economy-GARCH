@@ -122,7 +122,7 @@ def get_game_update_list() -> pd.DataFrame:
             print(f"Failed to retrieve the update list: {e}")
 
     updates = pd.DataFrame(updates)
-    save_csv("Updates Raw",updates,RAW_DATA_DIR,True)
+    save_csv("Updates Raw",updates,RAW_DATA_DIR)
     return updates
 
 #only use this to initialize if updates raw.csv does not exist (takes 15+ mins to run to prevent API shut out)

@@ -2,6 +2,11 @@
 
 from pathlib import Path
 
+#-----------------------
+#Analysis Cut offs
+#-----------------------
+CAPTURE_START_DATE = "2020-06-09" #TODO: IS A STRING OKAY?
+CAPTURE_END_DATE = None #TODO: IMPLEMENT A STABLE WAY TO SET THIS
 
 #-----------------------
 # Directory locations
