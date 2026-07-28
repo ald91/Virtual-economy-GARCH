@@ -5,7 +5,6 @@ import pandas as pd
 from config import ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR, SUPPORTED_INDEX_LIST
 from data_helper import load_csv, save_csv
 
-
 #=====================
 # function definitions
 #=====================

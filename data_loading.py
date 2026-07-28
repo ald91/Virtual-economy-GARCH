@@ -208,6 +208,6 @@ def update_updates_dates():
 #update_data = load_csv("Updates Raw",RAW_DATA_DIR)
 #get_full_updates_date(update_data)
 
-#UPDATE_NEEDED = is_data_old(UNIX_TIME_LAST_UPDATE)
-#if UPDATE_NEEDED:
-#    refresh_data()
+UPDATE_NEEDED = is_data_old(UNIX_TIME_LAST_UPDATE)
+if UPDATE_NEEDED:
+    refresh_data()

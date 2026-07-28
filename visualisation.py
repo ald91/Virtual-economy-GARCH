@@ -2,7 +2,6 @@
 
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from config import SUPPORTED_INDEX_LIST
 
 #=====================

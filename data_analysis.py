@@ -1,10 +1,8 @@
 """ performs analytical functions on MASTER data only"""
 
 import pandas as pd
-
-from config import ANALYSIS_DATA_DIR, SUPPORTED_INDEX_LIST
-from visualisation import plot_index_price, plot_pct_change, plot_volatility
-from data_helper import save_csv, load_csv
+from data_helper import load_csv, save_csv
+from config import ANALYSIS_DATA_DIR
 
 #=====================
 # function definitions
@@ -37,7 +35,7 @@ def calculate_percentage_change_squared(pct_change_dataframe:pd.DataFrame) -> pd
 
     return data
 
-def calculate_rolling_volatility(data:pd.DataFrame,time_window:int) -> pd.DataFrame:
+def calculate_rolling_volatility(pct_change_df:pd.DataFrame,time_window:int) -> pd.DataFrame:
     """ takes in a pct_change dataframe and applies a rolling volatility
     calculation based on the interval stated in days"""
 
@@ -69,34 +67,26 @@ def calculate_statistics(data: pd.DataFrame) -> pd.DataFrame:
 
     return statistics
 
-#===================
-# running commands
-#===================
+#=====================
+# LOGIC
+#=====================
 
-master_frame = load_csv("master",ANALYSIS_DATA_DIR)
+#load master
+master_df = load_csv("master", ANALYSIS_DATA_DIR)
 
-#calculation of % change
-pct_change_df = calculate_percentage_change(master_frame)
-save_csv("pct_change",pct_change_df,ANALYSIS_DATA_DIR)
+#calculate pct change and save
+pct_df = calculate_percentage_change(master_df)
+save_csv("pct_change",pct_df,ANALYSIS_DATA_DIR)
 
-#squred returns step
-squares = calculate_percentage_change_squared(pct_change_df)
-save_csv("squares", squares, ANALYSIS_DATA_DIR, save_index=True)
+#squares
+pct_sq = calculate_percentage_change_squared(pct_df)
+save_csv("squares", pct_sq, ANALYSIS_DATA_DIR)
 
-#data suitability step for modelling economy
-pct_change_stats_df = calculate_statistics(pct_change_df)
-save_csv("pct_change_stats",pct_change_stats_df,ANALYSIS_DATA_DIR,save_index=True)
+#calculate rolling vols
+vol7=calculate_rolling_volatility(pct_df,7)
+save_csv("rolling_vol_7",vol7,ANALYSIS_DATA_DIR)
+vol30=calculate_rolling_volatility(pct_df,30)
+save_csv("rolling_vol_30",vol30,ANALYSIS_DATA_DIR)
 
-
-
-
-#calculation of volatility
-rolling_volatility_df = calculate_rolling_volatility(pct_change_df,30)
-save_csv("rolling_vol_30",rolling_volatility_df,ANALYSIS_DATA_DIR)
-
-for index in SUPPORTED_INDEX_LIST:
-    #plot_pct_change(squares,index)
-    continue
-    plot_index_price(master_frame, index)
-    plot_pct_change(pct_change_df, index)
-    plot_volatility(rolling_volatility_df, index)
+stats = calculate_statistics(pct_df)
+save_csv("pct_change_stats",stats,ANALYSIS_DATA_DIR,True)
