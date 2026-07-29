@@ -6,8 +6,10 @@ raw_data/
 processed_data/
 analysis_data/
 figures/
+assignment_notes/
 
 *.pyc
 *.env
 *.DS_Store
+*.docx
 Thumbs.db

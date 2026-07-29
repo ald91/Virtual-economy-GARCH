@@ -36,7 +36,7 @@ def plot_index_price(data: pd.DataFrame, index_name:str="all") -> None:
     plt.grid(True)
     plt.show()
 
-def plot_pct_change(data: pd.DataFrame, index_name:str="all") -> None:
+def plot_returns(data: pd.DataFrame, index_name:str="all") -> None:
     """
     Plots daily percentage change for specific or all indices.
 

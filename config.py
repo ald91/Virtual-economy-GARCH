@@ -6,7 +6,7 @@ from pathlib import Path
 #Analysis Cut offs
 #-----------------------
 CAPTURE_START_DATE = "2020-06-09" #TODO: IS A STRING OKAY?
-CAPTURE_END_DATE = "2026-07-25" #TODO: IMPLEMENT A STABLE WAY TO SET THIS and decide on a time period to end analysis
+CAPTURE_END_DATE = "2026-07-27" #TODO: IMPLEMENT A STABLE WAY TO SET THIS and decide on a time period to end analysis
 
 #-----------------------
 # Directory locations
