@@ -1,7 +1,7 @@
 """ Obtains and classifies OSRS Update information for use with CPI data and statistics from OSRS Wiki,"""
 
 import pandas as pd
-from config import CAPTURE_START_DATE, EXOGENOUS_EVENT_CATEGORIES, EVENT_SCOPE, ECONOMIC_EFFECTS
+from src.config import CAPTURE_START_DATE, EXOGENOUS_EVENT_CATEGORIES, EVENT_SCOPE, ECONOMIC_EFFECTS
 
 event_categories = EXOGENOUS_EVENT_CATEGORIES
 
@@ -193,10 +193,11 @@ def create_event_index(updates_frame_dated_and_categorized: pd.DataFrame) -> pd.
 #=================
 #LOGIC
 #=================
-
-from data_helper import load_csv, save_csv
-from config import RAW_DATA_DIR, ANALYSIS_DATA_DIR
+"""
+from src.data_helper import load_csv, save_csv
+from src.config import RAW_DATA_DIR, ANALYSIS_DATA_DIR
 
 df = load_csv("events classified",RAW_DATA_DIR)
 df = create_event_index(df)
-save_csv("Events index", df, ANALYSIS_DATA_DIR,True)
+save_csv("events index", df, ANALYSIS_DATA_DIR,True)
+"""

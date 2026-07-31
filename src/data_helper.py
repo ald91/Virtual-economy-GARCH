@@ -2,7 +2,7 @@
 
 import pandas as pd
 from pathlib import Path
-from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, ANALYSIS_DATA_DIR
+from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, ANALYSIS_DATA_DIR
 
 #=====================
 # function definitions

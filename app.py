@@ -1,6 +1,7 @@
 """ Initializes the app and communicated with streamlit what to display on user display"""
 
 import streamlit as lit
+from  
 
 #------------------------
 # Page Config
@@ -17,11 +18,13 @@ lit.set_page_config(
 # Title
 #------------------------
 
-lit.title("📈 OSRS Consumer Price Index")
+lit.title("📈 Volatility in Virtual Economies a GARCH study on Old School Runescape")
 lit.write(
     """
-    Analysis of Grand Exchange sector indices, inflation,
-    and volatility behaviour in the Old School Runescape economy. 
-    Data taken from the Grand Exchange Market watch, based on official Runescape data.
+    This application allows the user to explore the economic stability and 
+    volatility of virtual economies. \n
+    This particular application is focused on the massively multiplayer online role Playing Game (MMORPG) Old School Runescape (OSRS)
+    by Jagex: The Runescape Company. \n
+    All data is obtained from the official OSRS Wiki using the Grand Exchange Market Watch API (GEMW) and the Wiki API.
     """
 )

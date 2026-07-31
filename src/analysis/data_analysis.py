@@ -1,8 +1,8 @@
 """ performs analytical functions on MASTER data only"""
 
 import pandas as pd
-from data_helper import load_csv, save_csv
-from config import ANALYSIS_DATA_DIR
+from src.data_helper import load_csv, save_csv
+from src.config import ANALYSIS_DATA_DIR
 
 #=====================
 # function definitions

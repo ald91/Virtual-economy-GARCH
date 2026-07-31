@@ -2,8 +2,8 @@
 
 import pandas as pd
 
-from config import ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR, SUPPORTED_INDEX_LIST
-from data_helper import load_csv, save_csv
+from src.config import RAW_DATA_DIR
+from src.data_helper import load_csv
 
 #=====================
 # function definitions
@@ -18,7 +18,7 @@ def clean_index(data:pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame
     """
-    data = dataframe.drop(
+    data = data.drop(
         columns=["id","volume"],
         errors="ignore"
     )
@@ -86,7 +86,7 @@ def load_all_indices(index_names: list[str]) -> dict[str, pd.DataFrame]:
 
     return indices
 
-def merge_indices(data:dict[str,pd.DataFrame]) -> pd.DataFrame:
+def merge_indices(data:dict[str,pd.DataFrame]) -> pd.DataFrame | None:
     """ Merged all cleaned CSV files into one master file ready 
     for analysis by column and matched by date.
         
@@ -117,20 +117,3 @@ def merge_indices(data:dict[str,pd.DataFrame]) -> pd.DataFrame:
             )
 
     return merged_dataframe
-
-#===================
-# running commands
-#===================
-indices = load_all_indices(SUPPORTED_INDEX_LIST)
-
-for index_name, dataframe in indices.items():
-
-    dataframe = clean_index(dataframe)
-    dataframe = convert_timestamp(dataframe)
-
-    indices[index_name] = dataframe
-
-    save_csv(index_name, dataframe, RAW_DATA_DIR ,False)
-
-indices = merge_indices(indices)
-save_csv("master",indices,ANALYSIS_DATA_DIR,False)

@@ -6,75 +6,8 @@ import time
 import pandas as pd
 import requests
 
-from config import RAW_DATA_DIR, CACHE_DURATION_MS, API_TIMEOUT_SECONDS, API_CALL_SLEEP, OSRS_GEMW_CPI_ENDPOINTS, OSRS_WIKI_API
-from data_helper import save_csv, load_csv
-
-UNIX_TIME_LAST_UPDATE = int(0)
-
-#==========================
-# Cache refreshing rules
-#==========================
-def is_data_old(unix_time_last_update_ms:int) -> bool:
-    """ checks the current time in ms since the last successful update,
-        Returns:
-            boolean: based on if the date since is > one day (ms).
-    """
-    current_time = int(time.time() * 1000)
-    if current_time - unix_time_last_update_ms  > CACHE_DURATION_MS:
-        return True
-    print("an update is not required, previous update was too recent")
-    return False
-
-
-#===========================
-#CPI Data aquisition
-#===========================
-
-def refresh_data() -> int:
-    """ contacts APIs, converts to pandas dataframe and 
-        saves responses in CSV format per index in /data,
-        Returns:
-            int: the last succesful update time in unix ms.
-    """
-    last_updated_ms = int(0)
-    successful_update = True
-
-    for index_name, url in OSRS_GEMW_CPI_ENDPOINTS.items():
-
-        record = []
-
-        try:
-            response = requests.get(
-                url,
-                timeout=API_TIMEOUT_SECONDS
-            )
-
-            if response.status_code != 200:
-                print("an invalid response code was returned, the update operation has stopped")
-                successful_update = False
-                continue
-
-            data = response.json()
-            for _, observations in data.items():
-                record.extend(observations)
-
-            dataframe = pd.DataFrame(record)
-            save_csv(index_name,dataframe,RAW_DATA_DIR)
-            print(f"succesfully updated {index_name} and saved to CSV")
-
-        except requests.exceptions.Timeout as e:
-            successful_update = False
-            print(f"{index_name} timed out.")
-            print(e)
-
-        except requests.exceptions.RequestException as e:
-            successful_update = False
-            print(f"Failed to retrieve {index_name}.")
-            print(e )
-    if successful_update:
-        last_updated_ms = int(time.time() * 1000)
-    print(f"last update time: {last_updated_ms} ms")
-    return last_updated_ms
+from src.config import RAW_DATA_DIR, API_TIMEOUT_SECONDS, API_CALL_SLEEP, OSRS_WIKI_API
+from src.data_helper import save_csv
 
 #===========================
 #Exogenous Events Data Aquisition
@@ -83,7 +16,7 @@ def refresh_data() -> int:
 def get_game_update_list() -> pd.DataFrame:
     """
     Contacts the OSRS Wiki Api and requests a complete list of all documented game updates.
-    Saves the responce as a CSV titles "Updates Raw.csv" in the "raw data" DIR.
+    Saves the responce as a CSV titles "exogenous_events_raw.csv" in the "raw data" DIR.
 
     """
     updates = []
@@ -122,10 +55,10 @@ def get_game_update_list() -> pd.DataFrame:
             print(f"Failed to retrieve the update list: {e}")
 
     updates = pd.DataFrame(updates)
-    save_csv("Updates Raw",updates,RAW_DATA_DIR)
+    save_csv("exogenous_events_raw",updates,RAW_DATA_DIR)
     return updates
 
-#only use this to initialize if updates raw.csv does not exist (takes 15+ mins to run to prevent API shut out)
+#only use this to initialize if exogenous_events_raw.csv does not exist (takes 15+ mins to run to prevent API shut out)
 def get_full_updates_date(update_data: pd.DataFrame) -> pd.DataFrame:
     """
     Contacts the OSRS Wiki API and requests all pages missing dates in the Updates_Raw.csv file.
@@ -187,27 +120,22 @@ def get_full_updates_date(update_data: pd.DataFrame) -> pd.DataFrame:
 
         time.sleep(API_CALL_SLEEP)
 
-    save_csv("Updates Dated", update_data, RAW_DATA_DIR)
+    save_csv("exogenous_events_dated", update_data, RAW_DATA_DIR)
     return update_data
 
 
-#use this if updates dated.csv already exists to only call for updates without dates
+#use this if exogenous_events_dated.csv already exists to only call for updates without dates
 #TODO: can then use new data
 def update_game_update_list():
+    """ x """
     return
 
 def update_updates_dates():
+    """ x """
     return
 
-#=======================
-#Running commands
-#=======================
 
-
-#update_data = get_game_update_list()
-#update_data = load_csv("Updates Raw",RAW_DATA_DIR)
+#""" update_data = get_game_update_list()
+#update_data = load_csv("exogenous_events_raw",RAW_DATA_DIR)
 #get_full_updates_date(update_data)
-
-UPDATE_NEEDED = is_data_old(UNIX_TIME_LAST_UPDATE)
-if UPDATE_NEEDED:
-    refresh_data()
+#refresh_data() """
