@@ -1,11 +1,11 @@
 {
     "economic_data": {
-        "last_updated" : "2026-07-30",
-        "earliest_date" : "2026-07-30"
+        "last_updated": "2026-08-03",
+        "earliest_date": "2020-06-09"
     },
     "event_data": {
-        "last_updated" : "2026-07-30",
-        "earliest_date" : "2026-07-30",
-        "total_events" : "0"
+        "last_updated": null,
+        "earliest_date": null,
+        "total_events": 0
     }
 }

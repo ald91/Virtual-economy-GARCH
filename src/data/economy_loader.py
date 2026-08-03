@@ -10,11 +10,11 @@ from src.data_helper import save_csv
 #CPI Data aquisition
 #===========================
 
-def refresh_data() -> bool:
+def refresh_cpi_data() -> bool:
     """ contacts APIs, converts to pandas dataframe and 
         saves responses in CSV format per index in /data,
         Returns:
-            int: the last succesful update time in unix ms.
+            bool: was the update a success.
     """
     successful_update = True
 

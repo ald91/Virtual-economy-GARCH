@@ -1,13 +1,16 @@
 """ contains configuration settings for the application """
 
 from pathlib import Path
+from datetime import date
 
 #-----------------------
 #Analysis Cut offs
 #-----------------------
-CAPTURE_START_DATE = "2020-06-09" #TODO: IS A STRING OKAY?
-CAPTURE_END_DATE = "2026-07-27" #TODO: IMPLEMENT A STABLE WAY TO SET THIS and decide on a time period to end analysis
+OSRS_RELEASE_DATE = date(2013,2,17)
+OSRS_GE_DATA_START_DATE = date(2020, 6, 9)
 
+#TODO: IMPLEMENT A STABLE WAY TO SET THIS and decide on a time period to end analysis
+CAPTURE_END_DATE = date(2026,7,27) 
 
 #-----------------------
 # Directory locations
@@ -23,8 +26,8 @@ ANALYSIS_DATA_DIR = DATA_DIR / "analysis_data"
 
 METADATA_JSON = DATA_DIR / "metadata" / "metadata.json"
 
-EXOGENOUS_EVENTS_RAW = RAW_DATA_DIR / "exogenous_events_raw"
-ECONOMY_RAW_CTI = RAW_DATA_DIR /"common_trade_index"
+EVENTS_MASTER_DATA = ANALYSIS_DATA_DIR / "events index.csv"
+ECONOMY_MASTER_DATA = ANALYSIS_DATA_DIR / "master.csv"
  
 #-----------------------
 # Cache & Timeouts

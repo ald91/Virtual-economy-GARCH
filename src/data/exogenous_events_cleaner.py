@@ -1,14 +1,13 @@
 """ Obtains and classifies OSRS Update information for use with CPI data and statistics from OSRS Wiki,"""
 
 import pandas as pd
-from src.config import CAPTURE_START_DATE, EXOGENOUS_EVENT_CATEGORIES, EVENT_SCOPE, ECONOMIC_EFFECTS
+from src.config import OSRS_GE_DATA_START_DATE, EXOGENOUS_EVENT_CATEGORIES, EVENT_SCOPE, ECONOMIC_EFFECTS
 
 event_categories = EXOGENOUS_EVENT_CATEGORIES
 
 #=====================
 # Helper Function
 #=====================
-
 def event_category_classification(update_title:str) -> str:
     """ prompts the user to manually assign a category for the event providing
         information to help them and a prompt
@@ -173,10 +172,10 @@ def remove_data_out_of_timeframe(updates_dated_frame: pd.DataFrame) -> pd.DataFr
     data = updates_dated_frame.copy()
     print(f" current event's in dataframe: {len(data)}")
     data = data[
-        data["date"] >= CAPTURE_START_DATE
+        data["date"] >= OSRS_GE_DATA_START_DATE
     ]
     data = data.sort_index(axis=0)
-    print(f"completed current event's in dataframe: {len(data)} occuring after: {CAPTURE_START_DATE}")
+    print(f"completed current event's in dataframe: {len(data)} occuring after: {OSRS_GE_DATA_START_DATE}")
     return data
 
 def create_event_index(updates_frame_dated_and_categorized: pd.DataFrame) -> pd.DataFrame:
@@ -190,14 +189,3 @@ def create_event_index(updates_frame_dated_and_categorized: pd.DataFrame) -> pd.
     data = data.sort_index()
     return data
 
-#=================
-#LOGIC
-#=================
-"""
-from src.data_helper import load_csv, save_csv
-from src.config import RAW_DATA_DIR, ANALYSIS_DATA_DIR
-
-df = load_csv("events classified",RAW_DATA_DIR)
-df = create_event_index(df)
-save_csv("events index", df, ANALYSIS_DATA_DIR,True)
-"""

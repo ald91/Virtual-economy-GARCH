@@ -1,34 +1,54 @@
 """ combines data functions into simple function requests for users and updates meta data"""
-
-from src.config import METADATA_JSON, EXOGENOUS_EVENTS_RAW, ECONOMY_RAW_CTI, SUPPORTED_INDEX_LIST
-from src.data_helper import save_csv
-
-import src.data.economy_loader as ecoloader
-import src.data.economy_cleaner as ecocleaner
-#import src.data.exogenous_events_loader
-#import src.data.exogenous_events_cleaner
-
 from datetime import datetime
 import pandas as pd
 import json
+from pathlib import Path
+
+from src.config import METADATA_JSON, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, SUPPORTED_INDEX_LIST, RAW_DATA_DIR, ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR
+from src.data_helper import save_csv, load_csv
+
+import src.data.economy_loader as ecoloader
+import src.data.economy_cleaner as ecocleaner
+import src.data.exogenous_events_loader as evloder
+#import src.data.exogenous_events_cleaner as evcleaner
 
 
 #===================
 #Helper Functions
 #===================
-def load_metadata():
-    """loads the metadata.json file in data/metadata"""
-    with open(METADATA_JSON, "r", encoding="utf-8") as file:
-        metadata = json.load(file)
+def create_metadata_file():
+    """ creates a metadata file if one doesnt exist"""
+    metadata = {
+        "economic_data": {
+            "last_updated": None,
+            "earliest_date": None
+        },
+        "event_data": {
+            "last_updated": None,
+            "earliest_date": None,
+            "total_events": 0
+        }
+    }
     return metadata
 
-def save_metadata(metadata):
+def load_metadata() -> dict:
+    """loads the metadata.json file in data/metadata"""
+    try:
+        with open(METADATA_JSON, "r", encoding="utf-8") as file:
+            metadata = json.load(file)
+        return metadata
+    except FileNotFoundError:
+        metadata = create_metadata_file()
+        print("a metadata file does not exist so one has been created")
+        return metadata
+
+def save_metadata(metadata) -> None:
     """saves the metadata.json file in data/metadata"""
     with open(METADATA_JSON, "w",encoding="utf-8") as file:
         json.dump(metadata, file, indent=4)
         print("metadata successfully updated")
 
-def update_metadata(update_type="all",economic_path=ECONOMY_RAW_CTI,events_path=EXOGENOUS_EVENTS_RAW):
+def update_metadata(update_type:str="all",economic_path:Path=ECONOMY_MASTER_DATA,events_path:Path=EVENTS_MASTER_DATA) -> dict:
     """  updates the metadata.json object based on the update type"""
 
     metadata = load_metadata()
@@ -36,17 +56,19 @@ def update_metadata(update_type="all",economic_path=ECONOMY_RAW_CTI,events_path=
     valid_update_types = ["all","economic","events"]
 
     economic_data = pd.read_csv(economic_path, index_col="date")
+    economic_data.index = pd.to_datetime(economic_data.index)
     events_data = pd.read_csv(events_path, index_col="date")
+    events_data.index = pd.to_datetime(events_data.index)
   
     if update_type == valid_update_types[0]:
         metadata = {
         "economic_data": {
                 "last_updated": update_time,
-                "earliest_date": economic_data.index.min().strftime("%Y-%m-%d")
+                "earliest_date": economic_data["date"].min().strftime("%Y-%m-%d")
             },
             "event_data": {
                 "last_updated": update_time,
-                "earliest_date": events_data.index.min().strftime("%Y-%m-%d"),
+                "earliest_date": events_data["date"].min().strftime("%Y-%m-%d"),
                 "total_events": len(events_data)
             }
         }
@@ -68,8 +90,8 @@ def update_metadata(update_type="all",economic_path=ECONOMY_RAW_CTI,events_path=
 def updated_needed(update_type) -> bool:
     """ uses datetime to check if an update is needed"""
     METADATA = load_metadata()
-    METADATA_LAST_UPDATED_CPI= METADATA["economic_data"]["last_updated"]
-    METADATA_LAST_UPDATED_EVENTS=METADATA["event_data"]["last_updated"]
+    METADATA_LAST_UPDATED_CPI= METADATA["economic_data"].get("last_updated")
+    METADATA_LAST_UPDATED_EVENTS=METADATA["event_data"].get("last_updated")
 
     today = datetime.now().date()
     if update_type == "economic":
@@ -78,7 +100,8 @@ def updated_needed(update_type) -> bool:
         last_updated = METADATA_LAST_UPDATED_EVENTS
     else:
         return False
-    print(last_updated)
+
+    print(f"data was last updated {last_updated}.")
 
     if last_updated is None:
         return True
@@ -89,6 +112,7 @@ def updated_needed(update_type) -> bool:
         print("Update is required.")
         return True
 
+    print("an update is not required.")
     return False
 
 #========================
@@ -104,13 +128,16 @@ def update_economic_data():
     if not data_status:
         return "an update is not required, the data is too recent"
 
-    refresh_attempt = ecoloader.refresh_data()
+    refresh_attempt = ecoloader.refresh_cpi_data()
     if not refresh_attempt:
         return "there was an error updating the economic data."
+
+
+    update_metadata(update_type)
     return f"Economic data successfully updated to {datetime.today()}."
 
-def clean_economic_data():
-    """ carried out a sequence of functions to clean the CPI data stored
+def clean_economic_data() -> None:
+    """ carries out a sequence of functions to clean the CPI data stored
     in the data DIR"""
     indices = ecocleaner.load_all_indices(SUPPORTED_INDEX_LIST)
 
@@ -118,13 +145,17 @@ def clean_economic_data():
         dataframe = ecocleaner.clean_index(dataframe)
         dataframe = ecocleaner.convert_timestamp(dataframe)
         indices[index_name] = dataframe
-        save_csv(index_name, dataframe, RAW_DATA_DIR ,False)
+        save_csv(index_name, dataframe, PROCESSED_DATA_DIR ,False)
+
+    print("economic data cleaning successful.")
 
     indices = ecocleaner.merge_indices(indices)
     save_csv("master",indices,ANALYSIS_DATA_DIR,False)
-    return "economic data cleaning successful."
 
-#TODO
+    print("economic data mastering successful.")
+
+    return
+
 def update_events_data():
     """ carries out a sequence of functions to update exogenous events data
     """
@@ -133,7 +164,22 @@ def update_events_data():
     if not data_status:
         return "an update is not required, the data is too recent"
 
-    refresh_attempt = el.refresh_data()
+    refresh_attempt = evloder.refresh_events_data()
     if not refresh_attempt:
-        return "there was an error updating the economic data."
-    return f"Economic data successfully updated to {datetime.today()}."
+        return "there was an error updating the exogenous events (updates) data."
+
+    update_metadata(update_type)
+
+    return f"Exogenous Events data successfully updated to {datetime.today()}."
+
+
+
+#def clean_events_data():
+#    """ carried out a sequence of functions to clean the updates data stored
+#    in the data DIR"""
+#    evcleaner.classify_events()
+#    evcleaner.remove_data_out_of_timeframe()
+#    evcleaner.create_event_index()
+
+update_economic_data()
+clean_economic_data()

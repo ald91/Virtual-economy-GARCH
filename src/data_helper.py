@@ -8,12 +8,15 @@ from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, ANALYSIS_DATA_DIR
 # function definitions
 #=====================
 
-def load_csv(sheet_name:str, target_dir:Path) -> pd.DataFrame:
+def load_csv(sheet_name:str, target_dir:Path,set_index=None) -> pd.DataFrame:
     """ loads the target sheet to the application"""
     file_path = target_dir/f"{sheet_name}.csv"
+    df = pd.read_csv(file_path)
+    if set_index is not None: 
+        df = df.set_index(f"{set_index}")
     if not file_path.exists():
         raise FileNotFoundError(f"file not found for {sheet_name} in directory at: {file_path}")
-    return pd.read_csv(file_path)
+    return df
 
 def save_csv(sheet_name:str, data:pd.DataFrame, target_dir:Path, save_index:bool=False) -> bool:
     """
