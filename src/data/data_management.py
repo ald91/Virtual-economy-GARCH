@@ -1,16 +1,16 @@
 """ combines data functions into simple function requests for users and updates meta data"""
 from datetime import datetime
-import pandas as pd
-import json
 from pathlib import Path
+import json
+import pandas as pd
 
-from src.config import METADATA_JSON, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, SUPPORTED_INDEX_LIST, RAW_DATA_DIR, ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR
+from src.config import METADATA_JSON, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, SUPPORTED_INDEX_LIST, ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR
 from src.data_helper import save_csv, load_csv
 
 import src.data.economy_loader as ecoloader
 import src.data.economy_cleaner as ecocleaner
 import src.data.exogenous_events_loader as evloder
-#import src.data.exogenous_events_cleaner as evcleaner
+import src.data.exogenous_events_cleaner as evcleaner
 
 
 #===================
@@ -93,6 +93,8 @@ def updated_needed(update_type) -> bool:
     METADATA_LAST_UPDATED_CPI= METADATA["economic_data"].get("last_updated")
     METADATA_LAST_UPDATED_EVENTS=METADATA["event_data"].get("last_updated")
 
+    print(METADATA_LAST_UPDATED_EVENTS)
+
     today = datetime.now().date()
     if update_type == "economic":
         last_updated = METADATA_LAST_UPDATED_CPI
@@ -112,7 +114,6 @@ def updated_needed(update_type) -> bool:
         print("Update is required.")
         return True
 
-    print("an update is not required.")
     return False
 
 #========================
@@ -162,24 +163,23 @@ def update_events_data():
     update_type = "events"
     data_status = updated_needed(update_type)
     if not data_status:
-        return "an update is not required, the data is too recent"
+        print("an update is not required, the data is too recent.")
+        return False
 
     refresh_attempt = evloder.refresh_events_data()
     if not refresh_attempt:
-        return "there was an error updating the exogenous events (updates) data."
+        print("there was an error updating the exogenous events (updates) data.")
+        return False
 
     update_metadata(update_type)
 
-    return f"Exogenous Events data successfully updated to {datetime.today()}."
+    print(f"Exogenous Events update process completed: {datetime.today()}.")
+    return True
 
-
-
-#def clean_events_data():
-#    """ carried out a sequence of functions to clean the updates data stored
-#    in the data DIR"""
-#    evcleaner.classify_events()
-#    evcleaner.remove_data_out_of_timeframe()
-#    evcleaner.create_event_index()
-
-update_economic_data()
-clean_economic_data()
+def clean_events_data(mode):
+    """ carried out a sequence of functions to clean the updates data stored
+    in the data DIR"""
+    #check the blacklisted events have been removed before going further
+    evcleaner.blacklist_check()
+    evcleaner.classify_events(mode)
+    evcleaner.create_event_index()

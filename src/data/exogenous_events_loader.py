@@ -6,7 +6,7 @@ import time
 import pandas as pd
 import requests
 
-from src.config import RAW_DATA_DIR, API_TIMEOUT_SECONDS, API_CALL_SLEEP, OSRS_WIKI_API, OSRS_GE_DATA_START_DATE
+from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, API_TIMEOUT_SECONDS, API_CALL_SLEEP, OSRS_WIKI_API, OSRS_GE_DATA_START_DATE
 from src.data_helper import save_csv,load_csv
 
 #===========================
@@ -59,7 +59,7 @@ def contact_wiki_for_updates() -> pd.DataFrame:
     new_updates = pd.DataFrame(new_updates)
     print(f"found a list of ({len(new_updates)}) update items")
 
-    EXISTING_EVENTS =  load_csv("updates dated", RAW_DATA_DIR,"pageid")
+    EXISTING_EVENTS =  load_csv("updates classified",PROCESSED_DATA_DIR,"pageid")
     BLACKLIST_EVENTS = load_csv("updates blacklist",RAW_DATA_DIR,"pageid")
 
     if EXISTING_EVENTS is None:
@@ -74,7 +74,7 @@ def contact_wiki_for_updates() -> pd.DataFrame:
     if "date" not in new_updates.columns:
         new_updates["date"] = pd.NaT
 
-    print(f"after checking against existing and blacklisted, final list of: ({len(new_updates)}) update items")
+    print(f"after checking against existing and blacklisted, final list of: ({len(new_updates)}) update items. An update isn't required.")
 
     return new_updates
 
@@ -117,14 +117,7 @@ def contact_wiki_for_dates(update_data:pd.DataFrame) -> pd.DataFrame:
 
                 if match:
                     match = match.group(1).strip()
-
-                    update_data.loc[index, "date"] = (
-                        pd.to_datetime(
-                            match,
-                            format="%d %B %Y"
-                        )
-                        .normalize()
-                    )
+                    update_data.loc[index, "date"] = (pd.to_datetime(match,format="%d %B %Y"))
 
                     print(f"Added date: {update_data.loc[index, 'date'].date()} for page_id: {page_id}")
 
@@ -151,16 +144,22 @@ def create_event_blacklist(update_data:pd.DataFrame, GE_data_start_date=OSRS_GE_
     """ creates a event blacklist that informs the application that these
     events occurred before OSRS existed and should be ignored."""
 
+    blacklist = load_csv("updates blacklist",RAW_DATA_DIR,"pageid")
+    blacklist.index = blacklist.index.astype("Int64")
+
+    if len(blacklist) > 1:
+        print(f"located blacklist so initialized a table\n {blacklist.head(5)}")
+    elif not isinstance(blacklist, pd.DataFrame):
+        blacklist = pd.DataFrame(columns=["pageid","ns","title","date"])
+        print(f"could not locate a blacklist so initialized a table\n {blacklist.head(0)}")
+
     GE_data_start_date = pd.to_datetime(GE_data_start_date)
-    blacklist = pd.DataFrame(columns=["pageid","ns","title","date"])
 
-    blacklist = update_data[
-        pd.to_datetime(update_data["date"]) < GE_data_start_date
-    ][["pageid","ns","title","date"]]
-    blacklist = blacklist.set_index("pageid")
-    blacklist = blacklist.sort_index()
+    blacklist = update_data[pd.to_datetime(update_data["date"]) < GE_data_start_date][["ns","title","date"]]
+    blacklist.index = blacklist.index.astype("Int64")
+    blacklist.sort_index(inplace=True)
 
-    save_csv("updates blacklist",blacklist,RAW_DATA_DIR)
+    save_csv("updates blacklist",blacklist,RAW_DATA_DIR,save_index=True)
     return blacklist
 
 #only use this to initialize if STORED_EVENTS_ANALYSIS.csv does not exist (takes 15+ mins to run to prevent API shut out)
@@ -171,14 +170,13 @@ def refresh_events_data() -> bool:
             bool: was the update a success.
     """
     EXISTING_EVENTS =  load_csv("updates dated", RAW_DATA_DIR,"pageid")
-    BLACKLIST_EVENTS = load_csv("updates blacklist",RAW_DATA_DIR,"pageid")
     successful_update = True
 
     new_updates = contact_wiki_for_updates()
 
     # if the function above has an exception len == 0 stops this function.
     if len(new_updates) == 0:
-        print("succesfully updated updates list, but failed before dates could be imported, attempt aborted.")
+        print("Update aborted. data is either too recent or the API is down and new data could be not located.")
         successful_update = True
         return successful_update
 
@@ -198,6 +196,7 @@ def refresh_events_data() -> bool:
     if len(EXISTING_EVENTS) > 0:
         dated_updates = pd.concat([EXISTING_EVENTS, dated_updates])
         dated_updates = dated_updates.set_index("pageid")
+        dated_updates.index.astype("Int64")
         dated_updates = dated_updates[~dated_updates.index.duplicated(keep="last")]
 
 
@@ -205,4 +204,3 @@ def refresh_events_data() -> bool:
     print("succesfully updated updates list, including dates and saved to CSV")
 
     return successful_update
-

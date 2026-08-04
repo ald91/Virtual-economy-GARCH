@@ -2,14 +2,16 @@ __pycache__/
 .vscode/
 .venv/
 
-raw_data/
-processed_data/
-analysis_data/
-figures/
+data/
 assignment_notes/
+
 
 *.pyc
 *.env
 *.DS_Store
 *.docx
 Thumbs.db
+
+src/fix.py
+data/metadata/metadata.json
+
