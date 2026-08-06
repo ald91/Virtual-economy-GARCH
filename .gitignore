@@ -2,8 +2,12 @@ __pycache__/
 .vscode/
 .venv/
 
-data/
 assignment_notes/
+*/analysis_data/*
+*/figures/*
+*/metadata/*
+*/processed_data/*
+*/raw_data/*
 
 
 *.pyc

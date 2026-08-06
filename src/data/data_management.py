@@ -4,31 +4,22 @@ from pathlib import Path
 import json
 import pandas as pd
 
-from src.config import METADATA_JSON, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, SUPPORTED_INDEX_LIST, ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR
+from src.config import METADATA_JSON, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, SUPPORTED_INDEX_LIST, ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
 from src.data_helper import save_csv, load_csv
 
 import src.data.economy_loader as ecoloader
 import src.data.economy_cleaner as ecocleaner
 import src.data.exogenous_events_loader as evloder
 import src.data.exogenous_events_cleaner as evcleaner
+from src.data.schema import ECONOMY_MASTER_SCHEMA, UPDATES_MASTER_SCHEMA, METADATA_SCHEMA
 
 
-#===================
-#Helper Functions
-#===================
+    #===================
+    #Helper Functions
+    #===================
 def create_metadata_file():
     """ creates a metadata file if one doesnt exist"""
-    metadata = {
-        "economic_data": {
-            "last_updated": None,
-            "earliest_date": None
-        },
-        "event_data": {
-            "last_updated": None,
-            "earliest_date": None,
-            "total_events": 0
-        }
-    }
+    metadata = METADATA_SCHEMA
     return metadata
 
 def load_metadata() -> dict:
@@ -48,7 +39,7 @@ def save_metadata(metadata) -> None:
         json.dump(metadata, file, indent=4)
         print("metadata successfully updated")
 
-def update_metadata(update_type:str="all",economic_path:Path=ECONOMY_MASTER_DATA,events_path:Path=EVENTS_MASTER_DATA) -> dict:
+def update_metadata(update_type:str="all",economic_path:Path=ECONOMY_MASTER_DATA,events_path:Path=EVENTS_MASTER_DATA) -> dict | None:
     """  updates the metadata.json object based on the update type"""
 
     metadata = load_metadata()
@@ -59,7 +50,7 @@ def update_metadata(update_type:str="all",economic_path:Path=ECONOMY_MASTER_DATA
     economic_data.index = pd.to_datetime(economic_data.index)
     events_data = pd.read_csv(events_path, index_col="date")
     events_data.index = pd.to_datetime(events_data.index)
-  
+
     if update_type == valid_update_types[0]:
         metadata = {
         "economic_data": {
@@ -74,17 +65,21 @@ def update_metadata(update_type:str="all",economic_path:Path=ECONOMY_MASTER_DATA
         }
     elif update_type == valid_update_types[1]:
         metadata["economic_data"]["last_updated"] = update_time
-        metadata["economic_data"]["earliest_date"] = economic_data.index.min().strftime("%Y-%m-%d")
+        if economic_data.empty or len(economic_data) == 0:
+            metadata["economic_data"]["earliest_date"] = None
+        else:
+            metadata["economic_data"]["earliest_date"] = (economic_data.index.min().strftime("%Y-%m-%d"))
     elif update_type == valid_update_types[2]:
         metadata["event_data"]["last_updated"] = update_time
-        metadata["event_data"]["earliest_date"] = events_data.index.min().strftime("%Y-%m-%d")
-        metadata["event_data"]["total_events"] = len(events_data)
+        if events_data.empty or len(events_data) == 0:
+            metadata["economic_data"]["earliest_date"] = None
+        else:
+            metadata["event_data"]["earliest_date"] = events_data.index.min().strftime("%Y-%m-%d")
+            metadata["event_data"]["total_events"] = len(events_data)
     else:
         print("could not save metadata, the update type was not recognised.")
         return None
-        
     save_metadata(metadata)
-
     return metadata
 
 def updated_needed(update_type) -> bool:
@@ -119,7 +114,36 @@ def updated_needed(update_type) -> bool:
 #========================
 #Functions
 #========================
+def initialize_data():
+    """ carries out a sequence of data updates should data not exist in the application"""
 
+    update_economy = False
+    update_events = False
+
+    if load_csv("master",ANALYSIS_DATA_DIR,"date") is None:
+        new_economic_master_file = pd.DataFrame(columns=ECONOMY_MASTER_SCHEMA)
+        new_economic_master_file.set_index("date",inplace=True)
+        save_csv("master", new_economic_master_file,ANALYSIS_DATA_DIR,True)
+        update_economy = True
+
+
+    if load_csv("events index",ANALYSIS_DATA_DIR,"date") is None:
+        new_events_master_file = pd.DataFrame(columns=UPDATES_MASTER_SCHEMA)
+        new_events_master_file.set_index("date",inplace=True)
+        save_csv("events index",new_events_master_file,ANALYSIS_DATA_DIR,True)
+        update_events = True
+
+    if update_economy:
+        update_economic_data()
+        clean_economic_data()
+    if update_events:
+        data = evloder.initialise_events_data()
+        if isinstance(data, pd.DataFrame):
+            evloder.create_event_blacklist(data)
+        clean_events_data(mode=False)
+
+    return
+    
 def update_economic_data():
     """ carries out a sequence of functions to update CPI data
     stored in the data DIR
@@ -166,20 +190,18 @@ def update_events_data():
         print("an update is not required, the data is too recent.")
         return False
 
-    refresh_attempt = evloder.refresh_events_data()
-    if not refresh_attempt:
-        print("there was an error updating the exogenous events (updates) data.")
-        return False
-
+    refresh_attempt = evloder.contact_wiki_for_updates()
+    dated_refresh_attempt = evloder.contact_wiki_for_dates()
     update_metadata(update_type)
 
     print(f"Exogenous Events update process completed: {datetime.today()}.")
     return True
 
-def clean_events_data(mode):
+def clean_events_data(mode=True):
     """ carried out a sequence of functions to clean the updates data stored
     in the data DIR"""
     #check the blacklisted events have been removed before going further
     evcleaner.blacklist_check()
     evcleaner.classify_events(mode)
     evcleaner.create_event_index()
+    return

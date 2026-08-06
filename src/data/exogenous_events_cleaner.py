@@ -107,18 +107,18 @@ def merge_classified_updates(existing_data:pd.DataFrame, new_data:pd.DataFrame) 
 #=====================
 # function definitions
 #=====================
-def blacklist_check()-> pd.DataFrame:
+def blacklist_check()-> pd.DataFrame | None:
     """ performs a small re-check on data before classification,
     removing any events that are on the blacklist to save time"""
 
-    EXISTING_EVENTS =  load_csv("updates classified",PROCESSED_DATA_DIR ,"pageid")
     BLACKLIST_EVENTS = load_csv("updates blacklist",RAW_DATA_DIR,"pageid")
     data = load_csv("updates dated", RAW_DATA_DIR,"pageid")
 
-    data = data[~data.index.isin(EXISTING_EVENTS.index)]
-    data = data[~data.index.isin(BLACKLIST_EVENTS.index)]
+    if data is not None:
+        data = data[~data.index.isin(BLACKLIST_EVENTS.index)]
+        save_csv("updates dated",data, RAW_DATA_DIR,True)
+        return data
 
-    save_csv("updates dated",data, RAW_DATA_DIR,True)
     return data
 
 def classify_events(partial: bool = True) -> None:

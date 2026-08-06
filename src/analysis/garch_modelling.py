@@ -3,7 +3,8 @@
 
 import plotly.graph_objects as go
 import pandas as pd
-from statsmodels.tsa.stattools import acf, adfuller
+
+from statsmodels.tsa.stattools import adfuller
 from statsmodels.stats.diagnostic import het_arch
 from arch import arch_model
 
@@ -13,7 +14,6 @@ from src.data_helper import load_csv
 #====================
 #DATA SETS
 #====================
-#TODO: REFACTOR
 EVENTS = load_csv("events index", ANALYSIS_DATA_DIR)
 CPI_ALL = load_csv("master", ANALYSIS_DATA_DIR)
 
@@ -35,42 +35,55 @@ ROLLING_VOL_7_STATS = load_csv("rolling_vol_7_stats", ANALYSIS_DATA_DIR).set_ind
 #GARCH FUNCTIONS
 #=====================
 
-def arch_lm_test(returns_dataframe:pd.DataFrame, index_name:str) -> bool:
-    """ prints ARCH-LM test to console. Test uses return data to investiage
+def arch_lm_test(returns:pd.DataFrame) -> pd.DataFrame:
+    """ Creates a dataframe and CSV of the results. Test uses return data to investiage
     if observed volatility is explainable (it relies on previous volatility)
     if it does (Homoskedacity) the ARCH model is not appropriate and should
     NOT be used for the data (p > 0.05)"""
 
-    p_value = int(0)
-    lm_statistic = int(0)
+    results = []
 
-    returns_data = returns_dataframe[f"{index_name}"].dropna()
+    for index in SUPPORTED_INDEX_LIST:
+        column_name = index.title()
+        returns_data = returns[column_name].dropna()
 
-    lm_statistic, p_value, f_statistic, f_p_value = het_arch(
-    returns_data,
-    nlags=30
-)
-    print("=================================================================================")
-    print(f"\n lm value for {index_name} = {lm_statistic} \n p value for {index_name} = {p_value}")
+        lm_statistic, p_value, f_statistic, f_p_value = het_arch(
+            returns_data,
+            nlags=30
+        )
 
-    if p_value < 0.05 and p_value >= 0:
-        print(f"The ARCH null hypothesis has been rejected for {index_name} as {p_value} is < 0.05. Modelling may be appropriate for this data. \n")
-        print("=================================================================================")
-        return True
+        results.append({
+            "index": column_name,
+            "lm_statistic": lm_statistic,
+            "p_value": p_value,
+            "f_statistic": f_statistic,
+            "f_p_value": f_p_value,
+            "arch_suitable": p_value < 0.05
+        })
 
-    print(f"The ARCH null hypothesis has been rejected for {index_name} as {p_value} is > 0.05. Modelling is not supported for this data. \n")
-    print("=================================================================================")
-    return False
+    return pd.DataFrame(results)
     
-def adf_test (returns_dataframe:pd.DataFrame, index_name:str) -> bool:
+def adf_test (returns:pd.DataFrame) -> pd.DataFrame:
     """ inspects a returns time series to deduce if a returns series
     is stationary or non-stationary. GARCH models require stationary
     returns series."""
 
-    returns = returns_dataframe[f"{index_name}"].dropna()
-    result = adfuller(returns)
+    results = []
 
-    print(f"{index_name} ADF statistic:, ({result[0]}). \n{index_name} p-value: ({result[1]}). \n")
+    for index in SUPPORTED_INDEX_LIST:
+        column_name = index.title()
+        returns_data = returns[column_name].dropna()
+        adf_statistic, p_value, used_lags, nobs, critical_values, icbest = adfuller(returns_data)
+
+        results.append({
+            "index": column_name,
+            "adf statistic": adf_statistic,
+            "adf_p_value": p_value,
+            "stationary": p_value < 0.05
+        })
+
+        return pd.DataFrame(results)
+
 
 def garch_analysis(index_name:str,p:int,q:int,returns_dataframe:pd.DataFrame=RETURNS_ALL, events_dataframe:pd.DataFrame=EVENTS, category_filter:str="all",scope_filter: str = "all"):
     """ performs the GARCH(X,Y) model where
@@ -164,11 +177,12 @@ def garch_analysis(index_name:str,p:int,q:int,returns_dataframe:pd.DataFrame=RET
 #plot_event_investigation(ROLLING_VOL_7, ROLLING_VOL_7_STATS,EVENTS,SELECTED_INDEX, "Rolling Volatility over 7 days")
 #plot_event_investigation(ROLLING_VOL_30, ROLLING_VOL_30_STATS,EVENTS,SELECTED_INDEX, "Rolling Volatility over 30 days")
 #plot_Acf_of_squared_returns(returns_SQ_ALL, SELECTED_INDEX)
+
 #for SELECTED_INDEX in SUPPORTED_INDEX_LIST:
-    #arch_possible = plot_arch_lm_test(returns_ALL,SELECTED_INDEX)
+    #arch_possible = arch_lm_test(RETURNS_ALL,SELECTED_INDEX.title())
     #plot_Acf_of_squared_returns(returns_SQ_ALL, SELECTED_INDEX)
     #print(f"{SELECTED_INDEX} should be used for ARCH: {arch_possible}.
-    #adf_test(RETURNS_ALL,SELECTED_INDEX)
+    #adf_test(RETURNS_ALL,SELECTED_INDEX.title())
 
 #GARCH_INDEX = ["common trade index","food index", "herb index"]
 #for SELECTED_INDEX in GARCH_INDEX:

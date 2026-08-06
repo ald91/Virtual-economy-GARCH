@@ -1,11 +1,19 @@
 {
     "economic_data": {
-        "last_updated": "2026-08-04",
-        "earliest_date": "2020-06-09"
+        "last_updated": "2026-08-06",
+        "earliest_date": null
     },
     "event_data": {
-        "last_updated": "2026-08-04",
-        "earliest_date": "2020-06-12",
-        "total_events": 293
+        "last_updated": "2026-08-06",
+        "earliest_date": null,
+        "total_events": 0
+    },
+    "GARCH_info": {
+        "common trade index": null,
+        "rune index": null,
+        "log index": null,
+        "food_index": null,
+        "metal_index": null,
+        "herb_index": null
     }
 }

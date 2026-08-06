@@ -44,10 +44,10 @@ def plot_index_price(data: pd.DataFrame, index_name:str="all") -> None:
 
 def plot_returns(data: pd.DataFrame, index_name:str="all") -> None:
     """
-    Plots daily percentage change for specific or all indices.
+    Plots daily returns for specific or all indices.
 
     Args:
-        data (pd.DataFrame): Percentage change dataframe.
+        data (pd.DataFrame): returns dataframe.
     """
 
     plot_data = data.copy()
@@ -56,12 +56,12 @@ def plot_returns(data: pd.DataFrame, index_name:str="all") -> None:
     if index_name != "all" and index_name in SUPPORTED_INDEX_LIST:
         plot_data[index_name].plot(
             figsize=(12, 6),
-                    title=f"OSRS {index_name} Daily Percentage Change"
+                    title=f"OSRS {index_name} Daily returns"
         )
     else:
         plot_data.plot(
             figsize=(12, 6),
-            title="OSRS Daily Percentage Change for all Trade Indices"
+            title="OSRS Daily returns for all Trade Indices"
     )
 
     plt.xlabel("Date")
