@@ -1,10 +1,10 @@
 
 import plotly.graph_objects as go
+import plotly.express as px
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.config import SUPPORTED_INDEX_LIST, EVENTS_MASTER_DATA
-from src.data_helper import load_csv
+from src.config import SUPPORTED_INDEX_LIST
 
 #=====================
 #HELPER FUNCTIONS
@@ -15,8 +15,7 @@ from src.data_helper import load_csv
 #=====================
 #FUNCTIONS
 #=====================
-import pandas as pd
-import plotly.express as px
+
 
 
 def plot_events_graph(event_data:pd.DataFrame) -> go.Figure:
@@ -50,7 +49,7 @@ def plot_events_graph(event_data:pd.DataFrame) -> go.Figure:
     return fig
 
 
-def plot_index_price(data: pd.DataFrame, index_name:str="all") -> None:
+def plot_index_price(data: pd.DataFrame, index_name:str="all") -> go.Figure:
     """
     Plots OSRS market index price levels over time. specific indexes can be called, default is all
 
@@ -59,24 +58,28 @@ def plot_index_price(data: pd.DataFrame, index_name:str="all") -> None:
     """
 
     plot_data = data.copy()
-    plot_data = plot_data.set_index("date")
+    plot_data["date"] = pd.to_datetime(plot_data["date"],errors="coerce")
 
     if index_name != "all" and index_name in SUPPORTED_INDEX_LIST:
 
-        plot_data[index_name].plot(
-            figsize=(12, 6),
-                    title=f"OSRS Grand Exchange {index_name}"
-        )
-    else:
-        plot_data.plot(
-            figsize=(12, 6),
-            title="OSRS Grand Exchange Market Indices"
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=index_name,
+            title=f"OSRS Grand Exchange {index_name.title()}",
         )
 
-    plt.xlabel("Date")
-    plt.ylabel("Index Price")
-    plt.grid(True)
-    plt.show()
+    else:
+
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=SUPPORTED_INDEX_LIST,
+            title="OSRS Grand Exchange Market Indices",
+        )
+
+
+    return fig
 
 def plot_returns(data: pd.DataFrame, index_name:str="all") -> None:
     """
