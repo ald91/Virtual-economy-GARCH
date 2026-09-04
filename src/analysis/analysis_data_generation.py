@@ -4,7 +4,7 @@ import src.analysis.statistical_analysis as s
 import src.analysis.garch_modelling as g
 
 from src.data_helper import load_csv,save_csv
-from src.config import ANALYSIS_DATA_DIR, PROCESSED_DATA_DIR
+from src.config import ANALYSIS_DATA_DIR
 
 #====================
 #DATA SETS
@@ -48,7 +48,6 @@ def generate_statistical_data():
 
     return
 
-
 def garch_suitability_test():
     """ performs preliminary checks (arch lm and adf) for garch suitability on datasets"""
     returns = load_csv("returns",ANALYSIS_DATA_DIR,"date")
@@ -64,11 +63,9 @@ def garch_suitability_test():
 
     return
 
+#TODO
 def garch_test():
     """ performs GARCH(1,1) testing on approved datasets from metadata"""
 
     return
 
-#=====
-generate_statistical_data()
-garch_suitability_test()

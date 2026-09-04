@@ -84,7 +84,6 @@ def adf_test (returns:pd.DataFrame) -> pd.DataFrame:
 
         return pd.DataFrame(results)
 
-
 def garch_analysis(index_name:str,p:int,q:int,returns_dataframe:pd.DataFrame=RETURNS_ALL, events_dataframe:pd.DataFrame=EVENTS, category_filter:str="all",scope_filter: str = "all"):
     """ performs the GARCH(X,Y) model where
         Args:

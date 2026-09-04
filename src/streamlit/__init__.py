@@ -1,0 +1,1 @@
+""" contains all information relating to front end GUI"""

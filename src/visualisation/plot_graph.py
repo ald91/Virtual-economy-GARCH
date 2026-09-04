@@ -3,7 +3,8 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.config import SUPPORTED_INDEX_LIST
+from src.config import SUPPORTED_INDEX_LIST, EVENTS_MASTER_DATA
+from src.data_helper import load_csv
 
 #=====================
 #HELPER FUNCTIONS
@@ -14,6 +15,41 @@ from src.config import SUPPORTED_INDEX_LIST
 #=====================
 #FUNCTIONS
 #=====================
+import pandas as pd
+import plotly.express as px
+
+
+def plot_events_graph(event_data:pd.DataFrame) -> go.Figure:
+    """ processes the events index.csv to return a interactable
+    figure using plotly"""
+    data = event_data
+
+    data["date"] = pd.to_datetime(data["date"])
+
+    fig = px.scatter(
+        data,
+        x="date",
+        y="category",
+        hover_data=[
+            "title",
+        ],
+        title="Exogenous Event Timeline",
+    )
+
+    fig.update_traces(
+        marker=dict(size=10),
+    )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Event Category",
+        
+        height=600,
+    )
+
+    return fig
+
+
 def plot_index_price(data: pd.DataFrame, index_name:str="all") -> None:
     """
     Plots OSRS market index price levels over time. specific indexes can be called, default is all

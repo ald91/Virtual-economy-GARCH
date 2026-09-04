@@ -1,25 +1,22 @@
-""" Initializes the app and communicated with streamlit what to display on user display"""
 
-import streamlit as lit
-from  
+import streamlit as st
 
 #------------------------
 # Page Config
 #------------------------
 
-lit.set_page_config(
+st.set_page_config(
     page_title="Virtual Economies GARCH Project",
     page_icon="📈",
     layout="wide"
 )
 
-
 #------------------------
 # Title
 #------------------------
 
-lit.title("📈 Volatility in Virtual Economies a GARCH study on Old School Runescape")
-lit.write(
+st.title("📈 Volatility in Virtual Economies a GARCH study on Old School Runescape")
+st.write(
     """
     This application allows the user to explore the economic stability and 
     volatility of virtual economies. \n
@@ -28,3 +25,8 @@ lit.write(
     All data is obtained from the official OSRS Wiki using the Grand Exchange Market Watch API (GEMW) and the Wiki API.
     """
 )
+
+
+#-------------------------
+# Page contents
+#-------------------------
