@@ -6,6 +6,8 @@ import pandas as pd
 
 from src.config import SUPPORTED_INDEX_LIST
 
+ddSUPPORTED_INDEX_LIST = list(SUPPORTED_INDEX_LIST)
+
 #=====================
 #HELPER FUNCTIONS
 #=====================
@@ -16,13 +18,40 @@ from src.config import SUPPORTED_INDEX_LIST
 #FUNCTIONS
 #=====================
 
+def plot_time_series(data: pd.DataFrame,index_name: str = "all",title: str = "OSRS Market Indices",y_axis_title: str = "Value") -> go.Figure:
 
+
+    plot_data = data.copy()
+    plot_data["date"] = pd.to_datetime(plot_data["date"],errors="coerce")
+    
+    if index_name != "all" and index_name in SUPPORTED_INDEX_LIST:
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=index_name,
+            title=title
+        )
+    else:
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=SUPPORTED_INDEX_LIST,
+            title=title
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title=y_axis_title,
+        height=600
+    )
+
+    return fig
 
 def plot_events_graph(event_data:pd.DataFrame) -> go.Figure:
     """ processes the events index.csv to return a interactable
     figure using plotly"""
-    data = event_data
 
+    data = event_data.copy()
     data["date"] = pd.to_datetime(data["date"])
 
     fig = px.scatter(
@@ -47,7 +76,6 @@ def plot_events_graph(event_data:pd.DataFrame) -> go.Figure:
     )
 
     return fig
-
 
 def plot_index_price(data: pd.DataFrame, index_name:str="all") -> go.Figure:
     """
@@ -81,59 +109,89 @@ def plot_index_price(data: pd.DataFrame, index_name:str="all") -> go.Figure:
 
     return fig
 
-def plot_returns(data: pd.DataFrame, index_name:str="all") -> None:
+def plot_returns(data: pd.DataFrame,index_name: str = "all") -> go.Figure:
     """
-    Plots daily returns for specific or all indices.
+    Creates a Plotly line graph showing daily returns
+    for a specific market index or all market indices.
 
     Args:
-        data (pd.DataFrame): returns dataframe.
+        data: Returns dataframe.
+        index_name: Market index to plot, or "all".
+
+    Returns:
+        Plotly Figure.
     """
 
     plot_data = data.copy()
-    plot_data = plot_data.set_index("date")
+    plot_data["date"] = pd.to_datetime(plot_data["date"],errors="coerce")
 
     if index_name != "all" and index_name in SUPPORTED_INDEX_LIST:
-        plot_data[index_name].plot(
-            figsize=(12, 6),
-                    title=f"OSRS {index_name} Daily returns"
+
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=index_name,
+            title=f"OSRS {index_name.title()} Daily Returns"
         )
+
     else:
-        plot_data.plot(
-            figsize=(12, 6),
-            title="OSRS Daily returns for all Trade Indices"
+
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=SUPPORTED_INDEX_LIST,
+            title="OSRS Daily Returns for All Trade Indices"
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Return",
+        height=600
     )
 
-    plt.xlabel("Date")
-    plt.ylabel("Change")
-    plt.grid(True)
-    plt.show()
+    return fig
 
-def plot_volatility(data: pd.DataFrame, index_name:str="all") -> None:
+def plot_volatility(data: pd.DataFrame,index_name: str = "all") -> go.Figure:
     """
-    Plots rolling volatility for specific indices or all.
+    Creates a Plotly line graph showing rolling volatility
+    for a specific index or all market indices.
 
     Args:
         data (pd.DataFrame): Rolling volatility dataframe.
+        index_name (str): Market index to plot, or "all".
+
+    Returns:
+        go.Figure: Plotly figure containing the volatility graph.
     """
 
     plot_data = data.copy()
-    plot_data = plot_data.set_index("date")
+    plot_data["date"] = pd.to_datetime(plot_data["date"],errors="coerce")
 
     if index_name != "all" and index_name in SUPPORTED_INDEX_LIST:
-        plot_data[index_name].plot(
-            figsize=(12, 6),
-                    title=f"OSRS {index_name} 30 Day Rolling Volatility."
-        )
-    else:
-        plot_data.plot(
-            figsize=(12, 6),
-            title="30 Day Rolling Volatility"
+
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=index_name,
+            title=f"OSRS {index_name.title()} 30 Day Rolling Volatility"
         )
 
-    plt.xlabel("Date")
-    plt.ylabel("Volatility")
-    plt.grid(True)
-    plt.show()
+    else:
+
+        fig = px.line(
+            plot_data,
+            x="date",
+            y=SUPPORTED_INDEX_LIST,
+            title="OSRS 30 Day Rolling Volatility"
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Volatility",
+        height=600
+    )
+
+    return fig
 
 def plot_volatility_events(volatility_30_data: pd.DataFrame, volatility_7_data:pd.DataFrame, events_data: pd.DataFrame, index_name: str) -> None:
     """

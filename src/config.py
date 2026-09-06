@@ -28,6 +28,13 @@ METADATA_JSON = DATA_DIR / "metadata" / "metadata.json"
 
 EVENTS_MASTER_DATA = ANALYSIS_DATA_DIR / "events index.csv"
 ECONOMY_MASTER_DATA = ANALYSIS_DATA_DIR / "master.csv"
+RETURNS_DATA = ANALYSIS_DATA_DIR / "returns.csv"
+SQ_RETURNS_DATA = ANALYSIS_DATA_DIR / "sq_returns.csv"
+
+VOL7_DATA = ANALYSIS_DATA_DIR / "vol_7.csv"
+VOL30_DATA = ANALYSIS_DATA_DIR / "vol_30.csv"
+
+
  
 #-----------------------
 # Cache & Timeouts

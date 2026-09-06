@@ -11,6 +11,7 @@ from arch import arch_model
 from src.config import ANALYSIS_DATA_DIR, SUPPORTED_INDEX_LIST
 from src.data_helper import load_csv
 
+"""
 #====================
 #DATA SETS
 #====================
@@ -29,22 +30,26 @@ ROLLING_VOL_30_STATS = load_csv("rolling_vol_30_stats", ANALYSIS_DATA_DIR).set_i
 
 ROLLING_VOL_7 = load_csv("rolling_vol_7",ANALYSIS_DATA_DIR).set_index("date")
 ROLLING_VOL_7_STATS = load_csv("rolling_vol_7_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
-
+"""
 
 #=====================
 #GARCH FUNCTIONS
 #=====================
 
-def arch_lm_test(returns:pd.DataFrame) -> pd.DataFrame:
+def arch_lm_test() -> pd.DataFrame:
     """ Creates a dataframe and CSV of the results. Test uses return data to investiage
     if observed volatility is explainable (it relies on previous volatility)
-    if it does (Homoskedacity) the ARCH model is not appropriate and should
-    NOT be used for the data (p > 0.05)"""
+    if it does (Homoskedacity).
+    
+    H0: No ARCH effects / conditional homoskedasticity.
+    H1: ARCH effects are present.
+    """
 
+    returns = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
     results = []
 
     for index in SUPPORTED_INDEX_LIST:
-        column_name = index.title()
+        column_name = index.lower()
         returns_data = returns[column_name].dropna()
 
         lm_statistic, p_value, f_statistic, f_p_value = het_arch(
@@ -60,18 +65,18 @@ def arch_lm_test(returns:pd.DataFrame) -> pd.DataFrame:
             "f_p_value": f_p_value,
             "arch_suitable": p_value < 0.05
         })
-
     return pd.DataFrame(results)
     
-def adf_test (returns:pd.DataFrame) -> pd.DataFrame:
+def adf_test () -> pd.DataFrame:
     """ inspects a returns time series to deduce if a returns series
     is stationary or non-stationary. GARCH models require stationary
     returns series."""
 
+    returns = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
     results = []
 
     for index in SUPPORTED_INDEX_LIST:
-        column_name = index.title()
+        column_name = index.lower()
         returns_data = returns[column_name].dropna()
         adf_statistic, p_value, used_lags, nobs, critical_values, icbest = adfuller(returns_data)
 
@@ -82,15 +87,17 @@ def adf_test (returns:pd.DataFrame) -> pd.DataFrame:
             "stationary": p_value < 0.05
         })
 
-        return pd.DataFrame(results)
+    return pd.DataFrame(results)
 
-def garch_analysis(index_name:str,p:int,q:int,returns_dataframe:pd.DataFrame=RETURNS_ALL, events_dataframe:pd.DataFrame=EVENTS, category_filter:str="all",scope_filter: str = "all"):
+def garch_analysis(index_name:str,p:int,q:int, category_filter:str="all",scope_filter: str = "all"):
     """ performs the GARCH(X,Y) model where
         Args:
             index_name (str) is the name of the index to be analysed
             previous_variance_amount P (int) is the timeframe for volitility to be considered.
             previous_squared_armound Q (int) is the timeframe for squared returns to be considered.
     """
+    events_dataframe = load_csv("events index", ANALYSIS_DATA_DIR)
+    returns_dataframe = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
 
     filtered_events = events_dataframe
 

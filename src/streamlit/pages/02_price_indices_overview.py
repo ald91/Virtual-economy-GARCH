@@ -46,16 +46,35 @@ st.write(
 #date filter
 #------------------------
 
+def reset_date_filter():
+    st.session_state["date_filter"] = (ECONOMIC_DATA["date"].min().date(), ECONOMIC_DATA["date"].max().date())
+
 min_date = ECONOMIC_DATA["date"].min().date()
 max_date = ECONOMIC_DATA["date"].max().date()
 
-selected_dates = st.date_input(
-    "Date Range",
-    value=(min_date, max_date),
-    min_value=min_date,
-    max_value=max_date
-)
+if "date_filter" not in st.session_state:
+    st.session_state["date_filter"] = (ECONOMIC_DATA["date"].min().date(), ECONOMIC_DATA["date"].max().date())
 
+
+col1, col2 = st.columns([5, 1])
+
+with col1:
+    selected_dates = st.date_input(
+        "Date Range",
+        min_value=min_date,
+        max_value=max_date,
+        key="date_filter"
+    )
+
+with col2:
+    st.write("")
+    st.write("")
+
+    st.button(
+        "Reset",
+        use_container_width=True,
+        on_click=reset_date_filter
+    )
 filtered_economic_data = ECONOMIC_DATA
 
 if len(selected_dates) == 2:

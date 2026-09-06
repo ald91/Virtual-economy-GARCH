@@ -4,9 +4,9 @@
         "earliest_date": null
     },
     "event_data": {
-        "last_updated": "2026-08-06",
-        "earliest_date": null,
-        "total_events": 0
+        "last_updated": "2026-09-06",
+        "earliest_date": "2020-06-12",
+        "total_events": 294
     },
     "GARCH_info": {
         "common trade index": null,

@@ -30,6 +30,11 @@ page_dict = {
         "title": "Price Index Details",
         "icon": "📈",
     },
+    "GARCH_analysis": {
+        "path" : "pages/04_garch_analysis.py",
+        "title" : "GARCH Analysis",
+        "icon" : "📈"
+    }
 }
 
 

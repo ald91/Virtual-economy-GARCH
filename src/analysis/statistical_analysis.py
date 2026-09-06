@@ -5,6 +5,7 @@ import pandas as pd
 #=====================
 # function definitions
 #=====================
+
 #BUG: indices are not saving uniform causing detection issues, consider .lower() or standardization earlier on.
 def calculate_returns(master:pd.DataFrame) -> pd.DataFrame:
     """ calculates the daily returns for
@@ -58,7 +59,7 @@ def calculate_statistics(data: pd.DataFrame) -> pd.DataFrame:
         "min": data.min(),
         "max": data.max(),
         "skewness": data.skew(),
-        "kurtosis": data.kurt()
+        "kurtosis": data.kurt() #NOTE: Excess kertosis NOT NORMAL (FISHERS DEFINITION)
     })
 
     statistics.index.name = "Market Index"

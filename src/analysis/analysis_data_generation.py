@@ -1,4 +1,5 @@
-""" holds the main functions to create analysis data from processed data"""
+""" holds the main functions to create analysis data from processed data using functions from 
+garch modelling.py and statistical analysis.py"""
 
 import src.analysis.statistical_analysis as s
 import src.analysis.garch_modelling as g
@@ -6,6 +7,7 @@ import src.analysis.garch_modelling as g
 from src.data_helper import load_csv,save_csv
 from src.config import ANALYSIS_DATA_DIR
 
+"""
 #====================
 #DATA SETS
 #====================
@@ -23,6 +25,7 @@ ROLLING_VOL_30_STATS = load_csv("rolling_vol_30_stats", ANALYSIS_DATA_DIR).set_i
 
 ROLLING_VOL_7 = load_csv("rolling_vol_7",ANALYSIS_DATA_DIR).set_index("date")
 ROLLING_VOL_7_STATS = load_csv("rolling_vol_7_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
+"""
 
 #====================
 #FUNCTIONS
@@ -31,10 +34,11 @@ ROLLING_VOL_7_STATS = load_csv("rolling_vol_7_stats", ANALYSIS_DATA_DIR).set_ind
 def generate_statistical_data():
     "runs full suite of statistical functions on available data"
     master = load_csv("master", ANALYSIS_DATA_DIR)
+    returns = load_csv("returns", ANALYSIS_DATA_DIR)
 
     datasets = {
         "returns": s.calculate_returns(master),
-        "sq_returns" : s.calculate_returns_squared(master)
+        "sq_returns" : s.calculate_returns_squared(returns)
 
     }
 
@@ -50,13 +54,15 @@ def generate_statistical_data():
 
 def garch_suitability_test():
     """ performs preliminary checks (arch lm and adf) for garch suitability on datasets"""
-    returns = load_csv("returns",ANALYSIS_DATA_DIR,"date")
 
-    arch_lm_result = g.arch_lm_test(returns)
-    adf_results = g.adf_test(returns)
+    arch_lm_result = g.arch_lm_test()
+    adf_results = g.adf_test()
 
-    arch_lm_result.set_index("index")
-    adf_results.set_index("index")
+    arch_lm_result = arch_lm_result.set_index("index")
+    print(arch_lm_result)
+
+    adf_results = adf_results.set_index("index")
+    print(adf_results)
 
     results = arch_lm_result.merge(adf_results, on="index")
     save_csv("arch suitability",results,ANALYSIS_DATA_DIR,True)
