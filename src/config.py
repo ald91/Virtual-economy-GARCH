@@ -34,6 +34,9 @@ SQ_RETURNS_DATA = ANALYSIS_DATA_DIR / "sq_returns.csv"
 VOL7_DATA = ANALYSIS_DATA_DIR / "vol_7.csv"
 VOL30_DATA = ANALYSIS_DATA_DIR / "vol_30.csv"
 
+ADF_DATA = ANALYSIS_DATA_DIR / "adf_data.csv"
+LM_DATA = ANALYSIS_DATA_DIR / "lm_data.csv"
+
 
  
 #-----------------------

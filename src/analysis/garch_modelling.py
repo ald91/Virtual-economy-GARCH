@@ -9,40 +9,24 @@ from statsmodels.stats.diagnostic import het_arch
 from arch import arch_model
 
 from src.config import ANALYSIS_DATA_DIR, SUPPORTED_INDEX_LIST
-from src.data_helper import load_csv
-
-"""
-#====================
-#DATA SETS
-#====================
-EVENTS = load_csv("events index", ANALYSIS_DATA_DIR)
-CPI_ALL = load_csv("master", ANALYSIS_DATA_DIR)
-
-
-RETURNS_ALL = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
-RETURNS_STATS = load_csv("returns_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
-
-RETURNS_SQ_ALL = load_csv("squares", ANALYSIS_DATA_DIR).set_index("date")
-RETURNS_SQ_ALL_STATS = load_csv("squares_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
-
-ROLLING_VOL_30 = load_csv("rolling_vol_30",ANALYSIS_DATA_DIR).set_index("date")
-ROLLING_VOL_30_STATS = load_csv("rolling_vol_30_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
-
-ROLLING_VOL_7 = load_csv("rolling_vol_7",ANALYSIS_DATA_DIR).set_index("date")
-ROLLING_VOL_7_STATS = load_csv("rolling_vol_7_stats", ANALYSIS_DATA_DIR).set_index("Market Index")
-"""
+from src.data_helper import load_csv, save_csv
 
 #=====================
 #GARCH FUNCTIONS
 #=====================
 
 def arch_lm_test() -> pd.DataFrame:
-    """ Creates a dataframe and CSV of the results. Test uses return data to investiage
-    if observed volatility is explainable (it relies on previous volatility)
-    if it does (Homoskedacity).
-    
+    """Test return series for ARCH effects.
+
+    The ARCH-LM test checks whether conditional variance depends
+    on previous squared returns, providing evidence of volatility
+    clustering.
+
     H0: No ARCH effects / conditional homoskedasticity.
     H1: ARCH effects are present.
+
+    A p-value below 0.05 provides evidence of ARCH effects and
+    supports further ARCH/GARCH modelling.
     """
 
     returns = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
@@ -63,9 +47,12 @@ def arch_lm_test() -> pd.DataFrame:
             "p_value": p_value,
             "f_statistic": f_statistic,
             "f_p_value": f_p_value,
-            "arch_suitable": p_value < 0.05
+            "arch_effects": p_value < 0.05
         })
-    return pd.DataFrame(results)
+
+    results = pd.DataFrame(results)
+    save_csv("lm_data",results,ANALYSIS_DATA_DIR)
+    return results
     
 def adf_test () -> pd.DataFrame:
     """ inspects a returns time series to deduce if a returns series
@@ -86,110 +73,195 @@ def adf_test () -> pd.DataFrame:
             "adf_p_value": p_value,
             "stationary": p_value < 0.05
         })
+    results = pd.DataFrame(results)
+    save_csv("adf_data",results,ANALYSIS_DATA_DIR)
+    return results
 
-    return pd.DataFrame(results)
+def garch_analysis(index_name: str, p: int, q: int, category_filter: list | None = None, scope_filter: list | None = None) -> tuple:
+    """Fit a GARCH model and plot conditional volatility with
+    filtered exogenous events.
 
-def garch_analysis(index_name:str,p:int,q:int, category_filter:str="all",scope_filter: str = "all"):
-    """ performs the GARCH(X,Y) model where
-        Args:
-            index_name (str) is the name of the index to be analysed
-            previous_variance_amount P (int) is the timeframe for volitility to be considered.
-            previous_squared_armound Q (int) is the timeframe for squared returns to be considered.
+    The function also calculates diagnostics,
+    including an ARCH-LM test on residuals and autocorrelation.
+    These are used to assess whether the GARCH model has 
+    captured the volatility dynamics of the series.
+
+    Args:
+        index_name (str): Name of the market index to analyse.
+        p (int): Number of lagged (days) conditional variance terms.
+        q (int): Number of lagged (days) squared return terms.
+        category_filter (list | None): Categories of events to display.
+            Use ["all"] or None to display all categories.
+        scope_filter (list | None): Scopes of events to display.
+            Use ["all"] or None to display all scopes.
+
+    Returns:
+        tuple: A Plotly figure showing GARCH conditional volatility
+            with filtered exogenous events, and a dictionary
+            containing GARCH model metrics.
     """
+
+    # Load data
     events_dataframe = load_csv("events index", ANALYSIS_DATA_DIR)
-    returns_dataframe = load_csv("returns",ANALYSIS_DATA_DIR).set_index("date")
 
-    filtered_events = events_dataframe
+    returns_dataframe = load_csv("returns", ANALYSIS_DATA_DIR).set_index("date")
 
-    if category_filter != "all":
-        filtered_events = filtered_events[
-            filtered_events["category"] == category_filter
-        ]
+    # Start with all events
+    filtered_events = events_dataframe.copy()
 
-    if scope_filter != "all":
-        filtered_events = filtered_events[
-            filtered_events["scope"] == scope_filter
-        ]
+    # Apply category filter
+    if category_filter and "all" not in category_filter:
+        filtered_events = filtered_events[filtered_events["category"].isin(category_filter)]
 
-    #convert values to % for GARCH
-    returns = returns_dataframe[f"{index_name}"].dropna() * 100
+    # Apply scope filter
+    if scope_filter and "all" not in scope_filter:
+        filtered_events = filtered_events[filtered_events["scope"].isin(scope_filter)]
 
+    # Convert decimal returns to percentage returns for GARCH
+    returns = returns_dataframe[index_name].dropna() * 100
+
+    # Create GARCH model
     model = arch_model(
-    returns,
-    mean="Constant",
-    vol="GARCH",
-    p=p,
-    q=q,
-    dist="t"
+        returns,
+        mean="Constant",
+        vol="GARCH",
+        p=p,
+        q=q,
+        dist="t"
     )
 
+    # Fit model
     results = model.fit(disp="off")
+
+    # -------------------------
+    # Post-estimation diagnostics
+    # -------------------------
+
+    standardized_residuals = results.std_resid.dropna()
+
+    # tests to confirm if residuals stil show ARCH effects after GARCH
+    residual_arch_lm, residual_arch_p, residual_arch_f, residual_arch_f_p = het_arch(standardized_residuals,nlags=30)
+
+    # Autocorrelation (do past results impact the current result)
+    residual_autocorrelation = standardized_residuals.autocorr()
+
+    # Autocorrelation in squared residuals
+    squared_residuals = standardized_residuals ** 2
+    squared_residual_autocorrelation = squared_residuals.autocorr()
+
+    #result values for clarity
+    alpha = results.params.get("alpha[1]")
+    beta = results.params.get("beta[1]")
+    omega = results.params.get("omega")
+    nu = results.params.get("nu")
+    mu = results.params.get("mu")
+
+    #p values for statistical significance
+    alpha_p = results.pvalues.get("alpha[1]")
+    beta_p = results.pvalues.get("beta[1]")
+    omega_p = results.pvalues.get("omega")
+    nu_p = results.pvalues.get("nu")
+    mu_p = results.pvalues.get("mu")
+
+    persistence = alpha + beta
+
+    aic = results.aic
+    bic = results.bic
+    log_likelihood = results.loglikelihood
+
+    # =========================
+    # metrics dict for Garch Page
+    # =========================
+
+    metrics = {
+        "alpha": alpha,
+        "beta": beta,
+        "persistence": persistence,
+        "omega": omega,
+        "nu": nu,
+        "mu": mu,
+        "aic": aic,
+        "bic": bic,
+        "log_likelihood": log_likelihood,
+        "alpha_p": alpha_p,
+        "beta_p": beta_p,
+        "omega_p": omega_p,
+        "nu_p": nu_p,
+        "mu_p": mu_p,
+
+        "residual_arch_lm": residual_arch_lm,
+        "residual_arch_p": residual_arch_p,
+        "residual_arch_f": residual_arch_f,
+        "residual_arch_f_p": residual_arch_f_p,
+        "residual_autocorrelation": residual_autocorrelation,
+        "squared_residual_autocorrelation": squared_residual_autocorrelation,
+    }
+    
     print(results.summary())
 
-    #plot graph of conditional volatility
     figure = go.Figure()
 
-    # Add event trace
-    figure.add_trace(
-        go.Scatter(
-            x=filtered_events["date"],
-            y=[5] * len(filtered_events),
-            mode="markers",
-            name="Events",
-            text=filtered_events[["title","category","scope"]],
-            hovertemplate=(
-                "Date: %{x}<br>"
-                "Event: %{text[0]}<br>"
-                "Category: %{text[1]}<br>"
-                "Scope: %{text[2]}<br>"
-                "<extra></extra>"
-            )
-        )
-    )
-    
     figure.add_trace(
         go.Scatter(
             x=returns.index,
             y=results.conditional_volatility,
             mode="lines",
-            name="GARCH Conditional Volatility"
+            name="GARCH Conditional Volatility",
+            line=dict(width=2),
+            hovertemplate=(
+                "Date: %{x|%d %b %Y}<br>"
+                "Conditional volatility: %{y:.4f}"
+                "<extra></extra>"
+            )
         )
     )
 
+    # -------------------------
+    # Event markers filter
+    # -------------------------
+
+    if not filtered_events.empty:
+
+        # Find a sensible position near the top of the volatility graph
+        event_y = results.conditional_volatility.max()
+
+        figure.add_trace(
+            go.Scatter(
+                x=filtered_events["date"],
+                y=[event_y] * len(filtered_events),
+                mode="markers",
+                name="Exogenous Events",
+                marker=dict(
+                    size=9,
+                    symbol="circle"
+                ),
+                customdata=filtered_events[
+                    ["title", "category", "scope"]
+                ].to_numpy(),
+                hovertemplate=(
+                    "Date: %{x|%d %b %Y}<br>"
+                    "Event: %{customdata[0]}<br>"
+                    "Category: %{customdata[1]}<br>"
+                    "Scope: %{customdata[2]}"
+                    "<extra></extra>"
+                )
+            )
+        )
+
+    # -------------------------
+    # Layout
+    # -------------------------
+
     figure.update_layout(
-        title=f"{index_name} GARCH({p},{q}) Conditional Volatility",
+        title=(
+            f"{index_name.title()} GARCH({p},{q}) "
+            "Conditional Volatility"
+        ),
         xaxis_title="Date",
-        yaxis_title="Estimated Volatility"
+        yaxis_title="Conditional Volatility",
+        height=600,
+        hovermode="closest"
     )
 
-    figure.update_yaxes(
-    range=[0, 6]
-    )
+    return (figure, metrics)
 
-    print(returns.head())
-    print(results.conditional_volatility.head())
-    figure.show()
-
-
-
-
-
-#=====================
-#EXCUTE
-#=====================
-
-#plot_event_investigation(returns_ALL,returns_STATS,EVENTS,SELECTED_INDEX,"Returns")
-#plot_event_investigation(returns_SQ_ALL,returns_SQ_ALL_STATS,EVENTS,SELECTED_INDEX,"Returns")
-#plot_event_investigation(ROLLING_VOL_7, ROLLING_VOL_7_STATS,EVENTS,SELECTED_INDEX, "Rolling Volatility over 7 days")
-#plot_event_investigation(ROLLING_VOL_30, ROLLING_VOL_30_STATS,EVENTS,SELECTED_INDEX, "Rolling Volatility over 30 days")
-#plot_Acf_of_squared_returns(returns_SQ_ALL, SELECTED_INDEX)
-
-#for SELECTED_INDEX in SUPPORTED_INDEX_LIST:
-    #arch_possible = arch_lm_test(RETURNS_ALL,SELECTED_INDEX.title())
-    #plot_Acf_of_squared_returns(returns_SQ_ALL, SELECTED_INDEX)
-    #print(f"{SELECTED_INDEX} should be used for ARCH: {arch_possible}.
-    #adf_test(RETURNS_ALL,SELECTED_INDEX.title())
-
-#GARCH_INDEX = ["common trade index","food index", "herb index"]
-#for SELECTED_INDEX in GARCH_INDEX:
-#    garch_analysis(SELECTED_INDEX,1,1,category_filter="New Content",scope_filter="Whole Economy")

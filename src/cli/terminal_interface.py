@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cli.data_interface import data_menu
+from src.cli.data_interface import data_menu
 
 
 def launch_streamlit():

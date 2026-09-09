@@ -3,8 +3,7 @@
 import streamlit as st
 import pandas as pd
 
-from src.config import SUPPORTED_INDEX_LIST, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, RETURNS_DATA, SQ_RETURNS_DATA, VOL30_DATA, VOL7_DATA
-from src.visualisation.plot_graph import plot_index_price, plot_returns
+from src.config import SUPPORTED_INDEX_LIST, ECONOMY_MASTER_DATA, EVENTS_MASTER_DATA, RETURNS_DATA, SQ_RETURNS_DATA, VOL30_DATA, VOL7_DATA, LM_DATA, ADF_DATA
 from src.streamlit.steamlit_helpers import filter_dataframe
 from src.streamlit.ui.graph_box import graph_box
 
@@ -61,12 +60,15 @@ V7_DATA["date"] = pd.to_datetime(V7_DATA["date"], errors="coerce")
 V30_DATA = pd.read_csv(VOL30_DATA)
 V30_DATA["date"] = pd.to_datetime(V30_DATA["date"], errors="coerce")
 
+ADF_DATA = pd.read_csv(ADF_DATA)
+LM_DATA = pd.read_csv(LM_DATA)
+
 #------------------------
 # Title
 #------------------------
 
 st.title(f"{INDEX_NAME.title()} — Detailed Statistics")
-if INDEX_NAME is None:
+if INDEX_NAME is not None:
     st.write(
         f"""
             Detailed economic statistics for {INDEX_NAME} showing a
@@ -75,6 +77,155 @@ if INDEX_NAME is None:
         """
     )
 
+
+
+# -----------------------
+# GARCH Eligibility
+# -----------------------
+
+lm_result = LM_DATA.loc[LM_DATA["index"] == INDEX_NAME]
+lm_result_value = bool(lm_result["arch_effects"].iloc[0])
+lm_p_value = lm_result["p_value"].iloc[0]
+
+adf_result = ADF_DATA.loc[ADF_DATA["index"] == INDEX_NAME]
+adf_result_value = bool(adf_result["stationary"].iloc[0])
+adf_p_value = adf_result["adf_p_value"].iloc[0]
+
+garch_eligibility = lm_result_value and adf_result_value
+
+st.divider()
+
+st.subheader("GARCH Model Suitability")
+
+st.write(
+    "The ADF and ARCH-LM tests provide preliminary statistical evidence "
+    "for whether GARCH modelling is appropriate for this market index."
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    st.markdown("### ADF — Stationarity")
+
+    st.caption(
+        "The Augmented Dickey-Fuller (ADF) test examines whether the "
+        "return series is stationary. Stationary returns are generally "
+        "required for modelling volatility with GARCH."
+    )
+
+    
+    st.metric(
+        "ADF p-value",
+        f"{adf_p_value:.4g}"
+    )
+
+    if adf_result_value:
+        st.success(
+            "Stationary returns detected"
+        )
+    else:
+        st.warning(
+            "Stationarity not supported"
+        )
+
+    if adf_p_value < 0.05:
+        st.info(
+            "The p-value is below 0.05, providing evidence against the "
+            "presence of a unit root and supporting stationarity."
+        )
+    else:
+        st.info(
+            "The p-value is at or above 0.05, so there is insufficient "
+            "evidence to reject the hypothesis."
+        )
+
+    with st.expander("View full ADF test results"):
+        st.dataframe(adf_result)
+
+
+
+with col2:
+
+    st.markdown("### ARCH-LM — Volatility Clustering")
+    st.caption(
+        "The ARCH-LM test examines whether the variance of returns "
+        "changes over time, providing evidence of volatility clustering."
+        "this metric shows if GARCH investigation is advisable."
+    )
+
+    st.metric(
+        "ARCH-LM p-value",
+        f"{lm_p_value:.4g}"
+    )
+
+    if lm_result_value:
+        st.success(
+            "Evidence of ARCH effects detected"
+        )
+    else:
+        st.warning(
+            "ARCH effects not supported"
+        )
+
+    if lm_p_value < 0.05:
+        st.info(
+            "The p-value is below 0.05, providing evidence of "
+            "conditional heteroskedasticity and supporting ARCH/GARCH "
+            "volatility modelling."
+        )
+    else:
+        st.info(
+            "The p-value is at or above 0.05, so there is insufficient "
+            "evidence of ARCH effects in this return series."
+        )
+
+
+    with st.expander("View full ARCH-LM test results"):
+        st.dataframe(lm_result)
+
+# -----------------------
+# GARCH OUTPUT
+# -----------------------
+
+st.divider()
+
+st.subheader("Overall GARCH Assessment")
+
+if garch_eligibility:
+    
+    st.success(
+        "GARCH modelling is supported by the preliminary tests. "
+    )
+
+    st.page_link(
+        "pages/04_garch_analysis.py",
+        label="Click here to view full GARCH analysis",
+        query_params={"index": INDEX_NAME},
+        width="stretch"
+    )
+
+    st.write(
+        "The return series satisfies the stationarity condition tested "
+        "by the ADF test and shows evidence of ARCH effects in the "
+        "ARCH-LM test. These results provide statistical support for "
+        "further GARCH modelling."
+    )
+
+
+
+else:
+
+    st.warning(
+        "GARCH modelling is not supported by both preliminary tests."
+    )
+
+    st.write(
+        "At least one of the preliminary tests does not provide the "
+        "required evidence for GARCH modelling. The results should "
+        "therefore be interpreted cautiously and further investigation "
+        "may be required."
+    )
 #------------------------
 # filters
 #------------------------

@@ -1,4 +1,4 @@
-from cli.terminal_interface import main_menu
+from src.cli.terminal_interface import main_menu
 
 
 if __name__ == "__main__":
