@@ -5,7 +5,7 @@ __pycache__/
 assignment_notes/
 */analysis_data/*
 */figures/*
-*/metadata/*
+*/metadata/metadata.json
 */processed_data/*
 */raw_data/*
 
