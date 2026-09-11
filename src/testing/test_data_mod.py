@@ -1,328 +1,452 @@
 import pandas as pd
+import requests
+
 from unittest.mock import Mock, patch
 
-from src.analysis.statistical_analysis import ( calculate_returns, calculate_returns_squared, calculate_rolling_volatility, calculate_statistics)
-from src.analysis.garch_modelling import (arch_lm_test, adf_test, garch_analysis)
+from src.data.economy_loader import refresh_cpi_data
+from src.data.exogenous_events_loader import (contact_wiki_for_dates, contact_wiki_for_updates, create_event_blacklist, initialise_events_data)
+from src.data.exogenous_events_cleaner import ( merge_classified_updates, blacklist_check, create_event_index)
+from src.data.economy_cleaner import ( clean_index, convert_timestamp, load_all_indices, merge_indices)
 
-from src.config import SUPPORTED_INDEX_LIST
+#--------------------
+#economy_loader.py
+#--------------------
 
-# ------------------------
-# statistical_analysis.py
-# ------------------------
+# T05 - Test successful CPI data refresh
+@patch("src.data.economy_loader.save_csv")
+@patch("src.data.economy_loader.requests.get")
+def test_refresh_cpi_data_success(mock_get, mock_save_csv):
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "2025-01-01": [
+            {"timestamp": 1234567890, "price": 100}
+        ]
+    }
 
-# T15 - Test daily returns are calculated correctly
-def test_calculate_returns():
+    mock_get.return_value = mock_response
 
+    result = refresh_cpi_data()
+
+    assert result is True
+    assert mock_get.called
+    assert mock_save_csv.called
+
+
+
+# T06 - Test CPI refresh handles an invalid API response
+@patch("src.data.economy_loader.save_csv")
+@patch("src.data.economy_loader.requests.get")
+def test_refresh_cpi_data_invalid_response(mock_get, mock_save_csv):
+    mock_response = Mock()
+    mock_response.status_code = 500
+
+    mock_get.return_value = mock_response
+
+    result = refresh_cpi_data()
+
+    assert result is False
+    mock_save_csv.assert_not_called()
+
+# T07 - Test unwanted columns are removed from index data
+def test_clean_index():
     data = pd.DataFrame({
-        "date": pd.to_datetime([
-            "2025-01-01",
-            "2025-01-02",
-            "2025-01-03"
-        ]),
-        "common trade index": [10, 20, 10],
-        "rune index": [10, 20, 30]
+        "timestamp": [1234567890],
+        "price": [100],
+        "id": [123],
+        "volume": [50]
     })
 
-    result = calculate_returns(data)
+    result = clean_index(data)
+
+    assert "id" not in result.columns
+    assert "volume" not in result.columns
+    assert "timestamp" in result.columns
+    assert "price" in result.columns
+
+#--------------------
+#economy_cleaner.py
+#--------------------
+
+# T08 - Test timestamps are converted into dates
+def test_convert_timestamp():
+    data = pd.DataFrame({
+        "timestamp": [1234567890, 9876543210],
+        "price": [100, 110]
+    })
+
+    result = convert_timestamp(data)
 
     assert "date" in result.columns
-    assert list(result.columns) == ["date", "common trade index", "rune index"]
+    assert "timestamp" not in result.columns
+    assert "price" in result.columns
+    assert list(result.columns) == ["date", "price"]
+    assert len(result) == 2
+    assert pd.api.types.is_datetime64_any_dtype(result["date"])
 
-    # First observation has no previous value
-    assert pd.isna(result.loc[0, "common trade index"])
-
-    # (20 - 10) / 10 = 1
-    assert result.loc[1, "common trade index"] == 1
-
-    # (10 - 20) / 20 = -0.5
-    assert result.loc[2, "common trade index"] == -0.5
-
-
-# T16 - Test returns are squared correctly
-def test_calculate_returns_squared():
-
-    data = pd.DataFrame({
-        "date": pd.to_datetime([
-            "2025-01-01",
-            "2025-01-02"
-        ]),
-        "common trade index": [1, -2],
-        "rune index": [2, -3]
-    })
-
-    result = calculate_returns_squared(data)
-
-    # 1 x 1 = 1
-    assert result.loc[0, "common trade index"] == 1
-
-    # -2 x -2 = 4
-    assert result.loc[1, "common trade index"] == 4
-
-    # -3 x -3 = 9
-    assert result.loc[1, "rune index"] == 9
-
-    # Date should remain unchanged
-    assert "date" in result.columns
-
-
-# T17 - Test rolling volatility is calculated
-def test_calculate_rolling_volatility():
-
-    data = pd.DataFrame({
-        "date": pd.date_range("2025-01-01", periods=3),
-        "common trade index": [1, 2, 3]
-    })
-
-    result = calculate_rolling_volatility(
-        data,
-        time_window=2
-    )
-
-    assert "date" in result.columns
-
-    # First observation cannot have a 2-day rolling value
-    assert pd.isna(result.loc[0, "common trade index"])
-    # Second observation should have a calculated value
-    assert not pd.isna(result.loc[1, "common trade index"])
-    # Third observation should also have a calculated value
-    assert not pd.isna(result.loc[2, "common trade index"])
-
-
-# T18 - Test descriptive statistics are calculated
-def test_calculate_statistics():
-
-    data = pd.DataFrame({
-        "common trade index": [1, 2, 3, 4],
-        "rune index": [2, 4, 6, 8]
-    })
-
-    result = calculate_statistics(data)
-
-    expected_columns = [
-        "mean",
-        "std_dev",
-        "variance",
-        "min",
-        "max",
-        "skewness",
-        "kurtosis"
+# T09 - Test all requested indices are loaded
+@patch("src.data.economy_cleaner.load_csv")
+def test_load_all_indices(mock_load_csv):
+    mock_load_csv.side_effect = [
+        pd.DataFrame({
+            "date": ["2025-01-01"],
+            "price": [100]
+        }),
+        pd.DataFrame({
+            "date": ["2025-01-01"],
+            "price": [200]
+        })
     ]
 
-    for column in expected_columns:
-        assert column in result.columns
+    index_names = [
+        "common trade index",
+        "rune index"
+    ]
 
-    assert result.index.name == "Market Index"
+    result = load_all_indices(index_names)
 
-    # Mean of 1, 2, 3, 4 = 2.5
-    assert result.loc["common trade index", "mean"] == 2.5
+    assert isinstance(result, dict)
+    assert len(result) == 2
+    assert "common trade index" in result
+    assert "rune index" in result
 
-    assert result.loc["common trade index", "min"] == 1
-    assert result.loc["common trade index", "max"] == 4
-
-    # Mean of 2, 4, 6, 8 = 5
-    assert result.loc["rune index", "mean"] == 5
-
-
-# ------------------------
-# garch_modelling.py
-# ------------------------
-
-# T19 - Test ARCH-LM analysis
-@patch("src.analysis.garch_modelling.save_csv")
-@patch("src.analysis.garch_modelling.load_csv")
-@patch("src.analysis.garch_modelling.het_arch")
-def test_arch_lm_test(mock_het_arch, mock_load_csv, mock_save_csv):
-
-    dates = pd.date_range("2025-01-01", periods=4)
-
-    returns = pd.DataFrame({
-        "date": dates
+# T10 - Test multiple indices are merged by date
+def test_merge_indices():
+    common_trade = pd.DataFrame({
+        "date": pd.to_datetime(["2025-01-01", "2025-01-02"]),
+        "price": [100, 110]
     })
 
-    # Add all supported indices so the function can test each one
-    for index in SUPPORTED_INDEX_LIST:
-        returns[index.lower()] = [1, 2, 3, 4]
+    rune = pd.DataFrame({
+        "date": pd.to_datetime(["2025-01-01", "2025-01-02"]),
+        "price": [200, 220]
+    })
 
-    mock_load_csv.return_value = returns
+    data = {
+        "common trade index": common_trade,
+        "rune index": rune
+    }
 
-    # Mock result returned by the ARCH-LM test
-    mock_het_arch.return_value = (
-        1,      # LM statistic
-        0.01,   # p-value
-        2,      # F statistic
-        0.02    # F p-value
+    result = merge_indices(data)
+
+    assert result is not None
+    assert len(result) == 2
+    assert "date" in result.columns
+    assert "common trade index" in result.columns
+    assert "rune index" in result.columns
+    assert result.loc[0, "common trade index"] == 100
+    assert result.loc[0, "rune index"] == 200
+
+
+#--------------------
+#exogenous_events_loader
+#--------------------
+
+# T11 - Test update API response is processed correctly
+@patch("src.data.exogenous_events_loader.load_csv")
+@patch("src.data.exogenous_events_loader.requests.get")
+def test_contact_wiki_for_updates(mock_get, mock_load_csv):
+
+    mock_get.return_value.json.return_value = {
+        "query": {
+            "categorymembers": [
+                {"pageid": 1, "ns": 112, "title": "Update One"},
+                {"pageid": 2, "ns": 112, "title": "Update Two"},
+                {"pageid": 3, "ns": 112, "title": "Update Three"}
+            ]
+        }
+    }
+
+    existing_events = pd.DataFrame(
+        {"title": ["Update One"]},
+        index=pd.Index([1], name="pageid")
     )
 
-    result = arch_lm_test()
+    blacklist = pd.DataFrame(
+        {"title": ["Update Two"]},
+        index=pd.Index([2], name="pageid")
+    )
+
+    mock_load_csv.side_effect = [existing_events, blacklist]
+
+    result = contact_wiki_for_updates()
 
     assert isinstance(result, pd.DataFrame)
+    assert len(result) == 1
+    assert result.iloc[0]["pageid"] == 3
+    assert result.iloc[0]["title"] == "Update Three"
+    assert "date" in result.columns
 
-    assert "index" in result.columns
-    assert "lm_statistic" in result.columns
-    assert "p_value" in result.columns
-    assert "f_statistic" in result.columns
-    assert "f_p_value" in result.columns
-    assert "arch_effects" in result.columns
 
-    assert len(result) == len(SUPPORTED_INDEX_LIST)
+# T12 - Test API failure returns empty DataFrame
+@patch("src.data.exogenous_events_loader.requests.get")
+def test_contact_wiki_for_updates_api_failure(mock_get):
 
-    # p-value is below 0.05, so ARCH effects should be True
-    assert result["arch_effects"].all()
+    mock_get.side_effect = requests.exceptions.RequestException()
+
+    result = contact_wiki_for_updates()
+
+    assert isinstance(result, pd.DataFrame)
+    assert result.empty
+
+# T13 - Test dates are extracted from API response
+@patch("src.data.exogenous_events_loader.time.sleep")
+@patch("src.data.exogenous_events_loader.save_csv")
+@patch("src.data.exogenous_events_loader.requests.get")
+@patch("src.data.exogenous_events_loader.load_csv")
+def test_contact_wiki_for_dates(
+    mock_load_csv,
+    mock_get,
+    mock_save_csv,
+    mock_sleep
+):
+
+    update_data = pd.DataFrame(
+        {
+            "date": [pd.NaT],
+            "title": ["Test Update"]
+        },
+        index=pd.Index([123], name="pageid")
+    )
+
+    mock_load_csv.side_effect = [
+        update_data,
+        None
+    ]
+
+    mock_get.return_value.json.return_value = {
+        "query": {
+            "pages": {
+                "123": {
+                    "revisions": [
+                        {
+                            "slots": {
+                                "main": {
+                                    "*": "|date = 15 January 2025\n"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    result = contact_wiki_for_dates()
+
+    assert isinstance(result, pd.DataFrame)
+    assert result.loc[123, "date"] == pd.Timestamp("2025-01-15")
 
     mock_save_csv.assert_called_once()
 
 
-# T20 - Test ADF stationarity analysis
-@patch("src.analysis.garch_modelling.save_csv")
-@patch("src.analysis.garch_modelling.load_csv")
-@patch("src.analysis.garch_modelling.adfuller")
-def test_adf_test(mock_adfuller, mock_load_csv, mock_save_csv):
+# T14 - Test missing update data returns None
+@patch("src.data.exogenous_events_loader.load_csv")
+def test_contact_wiki_for_dates_no_data(mock_load_csv):
 
-    dates = pd.date_range("2025-01-01", periods=4)
+    mock_load_csv.return_value = None
 
-    returns = pd.DataFrame({
-        "date": dates
-    })
+    result = contact_wiki_for_dates()
 
-    # Add all supported indices
-    for index in SUPPORTED_INDEX_LIST:
-        returns[index.lower()] = [1, 2, 3, 4]
+    assert result is None
 
-    mock_load_csv.return_value = returns
+# T15 - Test events before the GE start date are blacklisted
+@patch("src.data.exogenous_events_loader.save_csv")
+@patch("src.data.exogenous_events_loader.load_csv")
+def test_create_event_blacklist(mock_load_csv, mock_save_csv):
 
-    # Mock ADF result
-    mock_adfuller.return_value = (
-        -1,        # ADF statistic
-        0.01,      # p-value
-        1,         # used lags
-        3,         # observations
-        {"5%": -2},
-        1          # information criterion
+    mock_load_csv.return_value = None
+
+    update_data = pd.DataFrame(
+        {
+            "ns": [112, 112, 112],
+            "title": [
+                "Old Update",
+                "Valid Update",
+                "Another Old Update"
+            ],
+            "date": [
+                "2018-01-01",
+                "2020-01-01",
+                "2019-01-01"
+            ]
+        },
+        index=pd.Index([1, 2, 3], name="pageid")
     )
 
-    result = adf_test()
+    result = create_event_blacklist(
+        update_data,
+        GE_data_start_date="2019-01-01"
+    )
 
     assert isinstance(result, pd.DataFrame)
 
-    assert "index" in result.columns
-    assert "adf statistic" in result.columns
-    assert "adf_p_value" in result.columns
-    assert "stationary" in result.columns
+    assert list(result.index) == [1]
 
-    assert len(result) == len(SUPPORTED_INDEX_LIST)
-
-    # p-value is below 0.05, so the series should be marked stationary
-    assert result["stationary"].all()
+    assert result.iloc[0]["title"] == "Old Update"
 
     mock_save_csv.assert_called_once()
 
+# T16 - Test successful event data initialisation
+@patch("src.data.exogenous_events_loader.save_csv")
+@patch("src.data.exogenous_events_loader.contact_wiki_for_dates")
+@patch("src.data.exogenous_events_loader.contact_wiki_for_updates")
+@patch("src.data.exogenous_events_loader.load_csv")
+def test_initialise_events_data(
+    mock_load_csv,
+    mock_updates,
+    mock_dates,
+    mock_save_csv
+):
 
-# T21 - Test GARCH analysis and returned diagnostics
-@patch("src.analysis.garch_modelling.het_arch")
-@patch("src.analysis.garch_modelling.arch_model")
-@patch("src.analysis.garch_modelling.load_csv")
-def test_garch_analysis(mock_load_csv, mock_arch_model, mock_het_arch):
-
-    # Mock returns data
-    returns = pd.DataFrame({
-        "date": pd.to_datetime([
-            "2025-01-01",
-            "2025-01-02",
-            "2025-01-03",
-            "2025-01-04"
-        ]),
-        "common trade index": [1, 2, 3, 4]
-    })
-
-    # Mock event data
-    events = pd.DataFrame({
-        "date": pd.to_datetime(["2025-01-02"]),
-        "title": ["Test Event"],
-        "category": ["Content"],
-        "scope": ["Game-wide"]
-    })
-
-    # garch_analysis() loads events first, then returns
-    mock_load_csv.side_effect = [events, returns]
-
-    # Mock fitted GARCH results
-    mock_results = Mock()
-
-    mock_results.std_resid = pd.Series([1, 2, 3, 4])
-
-    mock_results.params = pd.Series({
-        "alpha[1]": 1,
-        "beta[1]": 2,
-        "omega": 3,
-        "nu": 4,
-        "mu": 5
-    })
-
-    mock_results.pvalues = pd.Series({
-        "alpha[1]": 1,
-        "beta[1]": 2,
-        "omega": 3,
-        "nu": 4,
-        "mu": 5
-    })
-
-    mock_results.aic = 1
-    mock_results.bic = 2
-    mock_results.loglikelihood = 3
-
-    mock_results.conditional_volatility = pd.Series(
-        [1, 2, 3, 4],
-        index=returns["date"]
+    existing_events = pd.DataFrame(
+        {
+            "pageid": [1],
+            "ns": [112],
+            "title": ["Existing Update"],
+            "date": ["2024-01-01"]
+        }
     )
 
-    # Mock GARCH model and fit
-    mock_model = Mock()
-    mock_model.fit.return_value = mock_results
-    mock_arch_model.return_value = mock_model
+    new_updates = pd.DataFrame(
+        {
+            "pageid": [2],
+            "ns": [112],
+            "title": ["New Update"]
+        }
+    )
 
-    # Mock residual ARCH-LM test
-    mock_het_arch.return_value = (1, 2, 3, 4)
+    dated_updates = pd.DataFrame(
+        {
+            "pageid": [2],
+            "ns": [112],
+            "title": ["New Update"],
+            "date": ["2025-01-01"]
+        }
+    )
 
-    # Run function
-    figure, metrics = garch_analysis("common trade index",1,1)
+    mock_load_csv.return_value = existing_events
+    mock_updates.return_value = new_updates
+    mock_dates.return_value = dated_updates
 
-    # Check outputs
-    assert figure is not None
-    assert isinstance(metrics, dict)
+    result = initialise_events_data()
 
-    # Check GARCH parameters were extracted correctly
-    assert metrics["alpha"] == 1
-    assert metrics["beta"] == 2
-    assert metrics["omega"] == 3
-    assert metrics["nu"] == 4
-    assert metrics["mu"] == 5
+    assert result is True
 
-    # Check persistence calculation
-    # alpha + beta = 1 + 2 = 3
-    assert metrics["persistence"] == 3
+    mock_updates.assert_called_once()
+    mock_dates.assert_called_once()
 
-    # Check model statistics
-    assert metrics["aic"] == 1
-    assert metrics["bic"] == 2
-    assert metrics["log_likelihood"] == 3
+    assert mock_save_csv.call_count >= 2
 
-    # Check p-values were extracted
-    assert metrics["alpha_p"] == 1
-    assert metrics["beta_p"] == 2
-    assert metrics["omega_p"] == 3
-    assert metrics["nu_p"] == 4
-    assert metrics["mu_p"] == 5
+#--------------------
+#exogenous_events_cleaner.py
+#--------------------
 
-    # Check residual ARCH-LM results
-    assert metrics["residual_arch_lm"] == 1
-    assert metrics["residual_arch_p"] == 2
-    assert metrics["residual_arch_f"] == 3
-    assert metrics["residual_arch_f_p"] == 4
+# T17 - Test classified event data is merged correctly
+def test_merge_classified_updates():
 
-    # Check residual autocorrelation calculations exist
-    assert metrics["residual_autocorrelation"] is not None
-    assert metrics["squared_residual_autocorrelation"] is not None
+    existing_data = pd.DataFrame(
+        {
+            "title": ["Old Event"],
+            "category": ["Content"]
+        },
+        index=pd.Index([1], name="pageid")
+    )
 
-    # Check the GARCH model was created and fitted
-    mock_arch_model.assert_called_once()
-    mock_model.fit.assert_called_once_with(disp="off")
+    new_data = pd.DataFrame(
+        {
+            "title": ["New Event"],
+            "category": ["Economic"]
+        },
+        index=pd.Index([2], name="pageid")
+    )
+
+    result = merge_classified_updates(existing_data, new_data)
+
+    assert len(result) == 2
+    assert result.index.name == "pageid"
+    assert 1 in result.index
+    assert 2 in result.index
+
+
+# T18 - Test duplicate event IDs keep the newest record
+def test_merge_classified_updates_duplicate():
+
+    existing_data = pd.DataFrame(
+        {
+            "title": ["Old Event"],
+            "category": ["Content"]
+        },
+        index=pd.Index([1], name="pageid")
+    )
+
+    new_data = pd.DataFrame(
+        {
+            "title": ["Updated Event"],
+            "category": ["Economic"]
+        },
+        index=pd.Index([1], name="pageid")
+    )
+
+    result = merge_classified_updates(existing_data, new_data)
+
+    assert len(result) == 1
+    assert result.loc[1, "title"] == "Updated Event"
+
+
+# T19 - Test blacklist removes blacklisted events
+@patch("src.data.exogenous_events_cleaner.save_csv")
+@patch("src.data.exogenous_events_cleaner.load_csv")
+def test_blacklist_check(mock_load_csv, mock_save_csv):
+
+    blacklist = pd.DataFrame(
+        {"title": ["Blacklisted Event"]},
+        index=pd.Index([1], name="pageid")
+    )
+
+    events = pd.DataFrame(
+        {
+            "title": ["Blacklisted Event", "Valid Event"],
+            "date": pd.to_datetime(["2025-01-01", "2025-01-02"])
+        },
+        index=pd.Index([1, 2], name="pageid")
+    )
+
+    mock_load_csv.side_effect = [blacklist, events]
+
+    result = blacklist_check()
+
+    assert len(result) == 1
+    assert 1 not in result.index
+    assert 2 in result.index
+    mock_save_csv.assert_called_once()
+
+
+# T20 - Test event index creation
+@patch("src.data.exogenous_events_cleaner.save_csv")
+@patch("src.data.exogenous_events_cleaner.load_csv")
+def test_create_event_index(mock_load_csv, mock_save_csv):
+
+    events = pd.DataFrame(
+        {
+            "ns": [112, 112],
+            "title": ["Event A", "Event B"],
+            "date": ["2025-01-02", "2025-01-01"]
+        },
+        index=pd.Index([1, 2], name="pageid")
+    )
+
+    mock_load_csv.return_value = events
+
+    create_event_index()
+
+    mock_save_csv.assert_called_once()
+
+    saved_data = mock_save_csv.call_args[0][1]
+
+    assert "ns" not in saved_data.columns
+    assert saved_data.index.name == "date"
+    assert list(saved_data.index) == [
+        pd.Timestamp("2025-01-01"),
+        pd.Timestamp("2025-01-02")
+    ]

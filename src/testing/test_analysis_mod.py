@@ -11,7 +11,7 @@ from src.config import SUPPORTED_INDEX_LIST
 #statistical analysis.py
 #------------------------
 
-# T15 - Test daily returns are calculated correctly
+# T22- Test daily returns are calculated correctly
 def test_calculate_returns():
     data = pd.DataFrame({
         "date": pd.to_datetime([
@@ -41,7 +41,7 @@ def test_calculate_returns():
     # (99 - 110) / 110 = -0.10
     assert result.loc[2, "common trade index"] == pytest.approx(-0.1) #floating point issue, maths correct
 
-# T16 - Test returns are squared correctly
+# T23 - Test returns are squared correctly
 def test_calculate_returns_squared():
     data = pd.DataFrame({
         "date": pd.to_datetime([
@@ -67,7 +67,7 @@ def test_calculate_returns_squared():
     assert "date" in result.columns
 
 
-# T17 - Test rolling volatility is calculated
+# T24 - Test rolling volatility is calculated
 def test_calculate_rolling_volatility():
     data = pd.DataFrame({
         "date": pd.date_range("2025-01-01", periods=4),
@@ -92,7 +92,7 @@ def test_calculate_rolling_volatility():
     assert result.loc[1, "common trade index"] == pytest.approx(expected) #fp issue
 
 
-# T18 - Test descriptive statistics are calculated
+# T25 - Test descriptive statistics are calculated
 def test_calculate_statistics():
     data = pd.DataFrame({
         "common trade index": [0.01, 0.02, 0.03, 0.04],
@@ -123,10 +123,10 @@ def test_calculate_statistics():
     assert result.loc["rune index", "mean"] == 0.05
 
 #-----------------------------
-#Garch_modeling
+#garch_modeling.py
 #-----------------------------
 
-# T19 - Test ARCH-LM analysis
+# T26 - Test ARCH-LM analysis
 @patch("src.analysis.garch_modelling.save_csv")
 @patch("src.analysis.garch_modelling.load_csv")
 @patch("src.analysis.garch_modelling.het_arch")
@@ -156,7 +156,7 @@ def test_arch_lm_test(mock_het_arch, mock_load_csv, mock_save_csv):
     mock_save_csv.assert_called_once()
 
 
-# T20 - Test ADF stationarity analysis
+# T27 - Test ADF stationarity analysis
 @patch("src.analysis.garch_modelling.save_csv")
 @patch("src.analysis.garch_modelling.load_csv")
 @patch("src.analysis.garch_modelling.adfuller")
@@ -197,7 +197,7 @@ def test_adf_test(mock_adfuller, mock_load_csv, mock_save_csv):
 
 
 
-# T21 - Test GARCH analysis and returned diagnostics
+# T28 - Test GARCH analysis and returned diagnostics
 @patch("src.analysis.garch_modelling.het_arch")
 @patch("src.analysis.garch_modelling.arch_model")
 @patch("src.analysis.garch_modelling.load_csv")
