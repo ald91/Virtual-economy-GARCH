@@ -1,18 +1,11 @@
 
 import plotly.graph_objects as go
 import plotly.express as px
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from src.config import SUPPORTED_INDEX_LIST
 
-ddSUPPORTED_INDEX_LIST = list(SUPPORTED_INDEX_LIST)
-
-#=====================
-#HELPER FUNCTIONS
-#=====================
-
-
+SUPPORTED_INDEX_LIST = list(SUPPORTED_INDEX_LIST)
 
 #=====================
 #FUNCTIONS
