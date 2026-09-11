@@ -23,6 +23,7 @@ STREAMLIT_DIR =  PROJECT_ROOT / "streamlit"
 RAW_DATA_DIR = DATA_DIR / "raw_data"
 PROCESSED_DATA_DIR = DATA_DIR / "processed_data"
 ANALYSIS_DATA_DIR = DATA_DIR / "analysis_data"
+TEST_DIR = DATA_DIR / "test_data"
 
 METADATA_JSON = DATA_DIR / "metadata" / "metadata.json"
 
