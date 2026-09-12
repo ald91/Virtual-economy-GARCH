@@ -126,7 +126,7 @@ def test_calculate_statistics():
 #garch_modeling.py
 #-----------------------------
 
-# T26 - Test ARCH-LM analysis
+# T26 - Test ARCH-LM analysis outputs required metrics (not mathematical)
 @patch("src.analysis.garch_modelling.save_csv")
 @patch("src.analysis.garch_modelling.load_csv")
 @patch("src.analysis.garch_modelling.het_arch")
@@ -156,7 +156,7 @@ def test_arch_lm_test(mock_het_arch, mock_load_csv, mock_save_csv):
     mock_save_csv.assert_called_once()
 
 
-# T27 - Test ADF stationarity analysis
+# T27 - Test ADF stationarity analysis outputs required metrics (not mathematical)
 @patch("src.analysis.garch_modelling.save_csv")
 @patch("src.analysis.garch_modelling.load_csv")
 @patch("src.analysis.garch_modelling.adfuller")
@@ -197,7 +197,7 @@ def test_adf_test(mock_adfuller, mock_load_csv, mock_save_csv):
 
 
 
-# T28 - Test GARCH analysis and returned diagnostics
+# T28 - Test GARCH analysis outputs required metrics (not mathematical)
 @patch("src.analysis.garch_modelling.het_arch")
 @patch("src.analysis.garch_modelling.arch_model")
 @patch("src.analysis.garch_modelling.load_csv")
