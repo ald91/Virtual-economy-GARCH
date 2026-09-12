@@ -2,8 +2,6 @@
 import streamlit as st
 import pandas as pd
 
-from streamlit_plotly_events import plotly_events
-
 from src.config import ECONOMY_MASTER_DATA, SUPPORTED_INDEX_LIST
 from src.visualisation.plot_graph import plot_index_price
 
