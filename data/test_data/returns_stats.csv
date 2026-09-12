@@ -1,0 +1,7 @@
+Market Index,mean,std_dev,variance,min,max,skewness,kurtosis
+common trade index,1.0,,,1.0,1.0,,
+rune index,1.0,,,1.0,1.0,,
+log index,1.0,,,1.0,1.0,,
+food index,1.0,,,1.0,1.0,,
+metal index,1.0,,,1.0,1.0,,
+herb index,1.0,,,1.0,1.0,,

@@ -198,12 +198,8 @@ if garch_eligibility:
         "GARCH modelling is supported by the preliminary tests. "
     )
 
-    st.page_link(
-        "pages/04_garch_analysis.py",
-        label="Click here to view full GARCH analysis",
-        query_params={"index": INDEX_NAME},
-        width="stretch"
-    )
+    if st.button("View GARCH Analysis",type="primary"):
+        st.switch_page("pages/04_garch_analysis.py", query_params={"index": INDEX_NAME})
 
     st.write(
         "The return series satisfies the stationarity condition tested "

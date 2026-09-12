@@ -7,7 +7,8 @@ from unittest.mock import patch
 from src.config import SUPPORTED_INDEX_LIST, DATA_DIR
 from src.data_helper import load_csv, save_csv
 
-from src.data.data_management import clean_economic_data
+from src.data.data_management import clean_economic_data, clean_events_data
+from src.analysis.analysis_data_generation import generate_statistical_data
 
 TEST_DIR = DATA_DIR/"test_data"
 
@@ -44,3 +45,45 @@ def test_economic_data_pipeline():
         assert all(index in master.columns for index in SUPPORTED_INDEX_LIST)
 
 #IT02 - DATA MODULE / Event Data cleaning pipeline
+#NOTE: patches required due to keyboard input bypass
+def test_event_data_pipeline():
+    with patch("src.data.exogenous_events_cleaner.RAW_DATA_DIR", TEST_DIR), \
+    patch("src.data.exogenous_events_cleaner.PROCESSED_DATA_DIR", TEST_DIR), \
+    patch("src.data.exogenous_events_cleaner.ANALYSIS_DATA_DIR",TEST_DIR), \
+    patch("src.data.exogenous_events_cleaner.event_category_classification", return_value="New Content"), \
+    patch("src.data.exogenous_events_cleaner.event_scope_classification", return_value="No Economic Impact"), \
+    patch("src.data.exogenous_events_cleaner.event_economic_effects_classification", return_value=[False,False,False,False,False,False,False,True]):
+
+        clean_events_data(mode=False)
+
+        # Check intermediate and final files
+        assert (TEST_DIR / "updates dated.csv").exists()
+        assert (TEST_DIR / "updates classified.csv").exists()
+        assert (TEST_DIR / "events index.csv").exists()
+
+        events = load_csv("events index", TEST_DIR, set_index="date")
+
+        assert events.index.name == "date"
+        assert "ns" not in events.columns
+
+#IT03 - check statistical generation works together
+def test_statistical_data_pipeline():
+    with patch("src.analysis.analysis_data_generation.ANALYSIS_DATA_DIR",TEST_DIR):
+
+        generate_statistical_data()
+
+        # Check expected output files
+        assert (TEST_DIR / "returns.csv").exists()
+        assert (TEST_DIR / "sq_returns.csv").exists()
+        assert (TEST_DIR / "vol_7.csv").exists()
+        assert (TEST_DIR / "vol_30.csv").exists()
+
+        # Check statistics files
+        assert (TEST_DIR / "returns_stats.csv").exists()
+        assert (TEST_DIR / "sq_returns_stats.csv").exists()
+        assert (TEST_DIR / "vol_7_stats.csv").exists()
+        assert (TEST_DIR / "vol_30_stats.csv").exists()
+
+        returns = load_csv("returns", TEST_DIR)
+        assert "date" in returns.columns
+        assert all(index in returns.columns for index in SUPPORTED_INDEX_LIST)

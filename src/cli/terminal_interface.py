@@ -13,7 +13,6 @@ def launch_streamlit():
 
     streamlit_app = (
         project_root
-        / "src"
         / "streamlit"
         / "streamlit_application.py"
     )

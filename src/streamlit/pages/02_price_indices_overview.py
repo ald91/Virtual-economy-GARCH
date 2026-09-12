@@ -100,7 +100,8 @@ for index in SUPPORTED_INDEX_LIST:
     with col1:
         st.subheader(index.title())
     with col2:
-        st.page_link("pages/03_price_index_details.py",label="Click Here For Detailed statistics",query_params={"index": index})
+        if st.button("View Index Details",type="primary",key=f"view_details_{index}"):
+            st.switch_page("pages/03_price_index_details.py", query_params={"index": index})
 
     st.divider()
 

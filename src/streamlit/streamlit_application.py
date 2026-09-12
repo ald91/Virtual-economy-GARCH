@@ -38,15 +38,43 @@ page_dict = {
 }
 
 
-pages = [
+main_pages = [
     st.Page(
-        page["path"],
-        title=page["title"],
-        icon=page["icon"],
-    )
-    for page in page_dict.values()
+        page_dict["home"]["path"],
+        title=page_dict["home"]["title"],
+        icon=page_dict["home"]["icon"],
+    ),
+    st.Page(
+        page_dict["events"]["path"],
+        title=page_dict["events"]["title"],
+        icon=page_dict["events"]["icon"],
+    ),
+    st.Page(
+        page_dict["price_indices"]["path"],
+        title=page_dict["price_indices"]["title"],
+        icon=page_dict["price_indices"]["icon"],
+    ),
 ]
 
+detail_pages = [
+    st.Page(
+        page_dict["price_index_details"]["path"],
+        title=page_dict["price_index_details"]["title"],
+        icon=page_dict["price_index_details"]["icon"],
+    ),
+    st.Page(
+        page_dict["GARCH_analysis"]["path"],
+        title=page_dict["GARCH_analysis"]["title"],
+        icon=page_dict["GARCH_analysis"]["icon"],
+    ),
+]
+
+pages = {
+    "Main": main_pages,
+    "Advanced": detail_pages,
+}
+
+pg = st.navigation(pages, position="sidebar")
 
 pg = st.navigation(pages)
 
